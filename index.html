@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>3D Raumbesichtigung</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{background:#0a0a0a;font-family:'Courier New',monospace;color:#e0e0e0;overflow:hidden;height:100dvh}
+
+/* Loader */
+#loader{position:fixed;inset:0;background:#0a0a0a;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:24px;z-index:100;transition:opacity 0.6s ease}
+#loader.hidden{opacity:0;pointer-events:none}
+#loader h1{font-size:clamp(1.2rem,3vw,1.8rem);font-weight:400;letter-spacing:0.3em;text-transform:uppercase;color:#c8b89a}
+.progress-bar{width:min(320px,80vw);height:2px;background:#2a2a2a}
+.progress-fill{height:100%;background:#c8b89a;width:0%;transition:width 0.3s ease}
+#loader-status{font-size:0.75rem;letter-spacing:0.15em;color:#666}
+
+/* Drag & Drop Upload Screen */
+#upload-screen{position:fixed;inset:0;background:#0a0a0a;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:28px;z-index:90}
+#upload-screen.hidden{display:none}
+#upload-screen h1{font-size:clamp(1.2rem,3vw,1.8rem);font-weight:400;letter-spacing:0.3em;text-transform:uppercase;color:#c8b89a}
+#drop-zone{width:min(420px,85vw);height:200px;border:1px solid #333;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;cursor:pointer;transition:border-color 0.2s,background 0.2s}
+#drop-zone:hover,#drop-zone.dragover{border-color:#c8b89a;background:rgba(200,184,154,0.05)}
+#drop-zone .icon{font-size:2.5rem;opacity:0.4}
+#drop-zone p{font-size:0.78rem;letter-spacing:0.15em;color:#666;text-transform:uppercase;text-align:center;line-height:1.8}
+#drop-zone span{font-size:0.65rem;color:#444;letter-spacing:0.1em}
+#file-input{display:none}
+.upload-btn{padding:10px 28px;background:transparent;border:1px solid #444;color:#888;font-family:'Courier New',monospace;font-size:0.72rem;letter-spacing:0.2em;text-transform:uppercase;cursor:pointer;transition:border-color 0.2s,color 0.2s}
+.upload-btn:hover{border-color:#c8b89a;color:#c8b89a}
+
+/* Overlay */
+#overlay{position:fixed;inset:0;background:rgba(10,10,10,0.85);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;z-index:50;backdrop-filter:blur(4px);transition:opacity 0.3s ease}
+#overlay.hidden{opacity:0;pointer-events:none}
+#overlay h2{font-size:clamp(1rem,2.5vw,1.4rem);font-weight:400;letter-spacing:0.25em;text-transform:uppercase;color:#c8b89a}
+.controls-hint{display:grid;grid-template-columns:auto 1fr;gap:6px 16px;font-size:0.78rem;letter-spacing:0.08em;color:#888;line-height:1.8}
+.controls-hint .key{color:#c8b89a;text-align:right}
+.slider-row{display:flex;align-items:center;gap:12px}
+.slider-row label{font-size:0.75rem;letter-spacing:0.12em;color:#888;text-transform:uppercase;white-space:nowrap;width:110px;text-align:right}
+.slider-row input[type=range]{width:150px;accent-color:#c8b89a;cursor:pointer}
+.slider-row span{font-size:0.75rem;color:#c8b89a;width:36px;text-align:left}
+.divider{width:260px;height:1px;background:#222;margin:2px 0}
+.btn-row{display:flex;gap:12px;margin-top:6px}
+.start-btn{padding:10px 32px;background:transparent;border:1px solid #c8b89a;color:#c8b89a;font-family:'Courier New',monospace;font-size:0.75rem;letter-spacing:0.25em;text-transform:uppercase;cursor:pointer;transition:background 0.2s,color 0.2s}
+.start-btn:hover{background:#c8b89a;color:#0a0a0a}
+.new-file-btn{padding:10px 20px;background:transparent;border:1px solid #333;color:#555;font-family:'Courier New',monospace;font-size:0.75rem;letter-spacing:0.2em;text-transform:uppercase;cursor:pointer;transition:border-color 0.2s,color 0.2s}
+.new-file-btn:hover{border-color:#888;color:#888}
+
+/* Crosshair */
+#crosshair{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:20px;height:20px;pointer-events:none;z-index:10;opacity:0;transition:opacity 0.3s ease}
+#crosshair.visible{opacity:0.6}
+#crosshair::before,#crosshair::after{content:'';position:absolute;background:#ffffff}
+#crosshair::before{width:1px;height:100%;left:50%;top:0}
+#crosshair::after{width:100%;height:1px;top:50%;left:0}
+#canvas{display:block}
+#esc-hint{position:fixed;top:14px;right:16px;font-size:0.65rem;letter-spacing:0.15em;color:#555;text-transform:uppercase;pointer-events:none;z-index:10;opacity:0;transition:opacity 0.3s ease}
+#esc-hint.visible{opacity:1}
+#info{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);font-size:0.65rem;letter-spacing:0.15em;color:#444;text-transform:uppercase;pointer-events:none;z-index:10}
+</style>
+</head>
+<body>
+
+<!-- Ladescreen -->
+<div id="loader" class="hidden">
+  <h1>Raumbesichtigung</h1>
+  <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+  <span id="loader-status">Lade Modell ...</span>
+</div>
+
+<!-- Drag & Drop Upload -->
+<div id="upload-screen">
+  <h1>Raumbesichtigung</h1>
+  <div id="drop-zone">
+    <div class="icon">&#8682;</div>
+    <p>GLB-Datei hier hineinziehen</p>
+    <span>oder</span>
+  </div>
+  <button class="upload-btn" id="browse-btn">Datei ausw&#228;hlen</button>
+  <input type="file" id="file-input" accept=".glb" />
+</div>
+
+<!-- Start Overlay -->
+<div id="overlay" class="hidden">
+  <h2 id="overlay-title">Raumbesichtigung</h2>
+  <div class="controls-hint">
+    <span class="key">W A S D</span><span>Bewegen</span>
+    <span class="key">Maus</span><span>Umsehen</span>
+    <span class="key">ESC</span><span>Pause / Einstellungen</span>
+  </div>
+  <div class="divider"></div>
+  <div class="slider-row">
+    <label for="brightness-slider">&#9728; Helligkeit</label>
+    <input type="range" id="brightness-slider" min="0.5" max="8" step="0.1" value="3.0" />
+    <span id="brightness-value">3.0</span>
+  </div>
+  <div class="slider-row">
+    <label for="height-slider">&#8597; Augenh&ouml;he</label>
+    <input type="range" id="height-slider" min="0.5" max="2.5" step="0.05" value="1.60" />
+    <span id="height-value">1.60 m</span>
+  </div>
+  <div class="slider-row">
+    <label for="bg-color">&#9632; Hintergrund</label>
+    <input type="color" id="bg-color" value="#1a1510" style="width:50px;height:28px;border:1px solid #444;background:none;cursor:pointer;padding:2px" />
+    <span style="font-size:0.7rem;color:#555;letter-spacing:0.05em">Farbe</span>
+  </div>
+  <div class="divider"></div>
+  <div class="btn-row">
+    <button class="start-btn" id="start-btn">Betreten</button>
+    <button class="new-file-btn" id="new-file-btn">Neue Datei</button>
+  </div>
+</div>
+
+<div id="crosshair"></div>
+<canvas id="canvas"></canvas>
+<div id="esc-hint">ESC - Pause</div>
+<div id="info">WASD bewegen &nbsp;|&nbsp; Maus umsehen &nbsp;|&nbsp; ESC pausieren</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.167.1/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.167.1/examples/jsm/"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { PointerLockControls } from 'three/addons/controls/PointerLockControls.js';
+
+// DOM
+const canvas        = document.getElementById('canvas');
+const loaderEl      = document.getElementById('loader');
+const uploadScreen  = document.getElementById('upload-screen');
+const overlayEl     = document.getElementById('overlay');
+const overlayTitle  = document.getElementById('overlay-title');
+const crosshair     = document.getElementById('crosshair');
+const escHint       = document.getElementById('esc-hint');
+const progressBar   = document.getElementById('progress-fill');
+const statusText    = document.getElementById('loader-status');
+const startBtn      = document.getElementById('start-btn');
+const newFileBtn    = document.getElementById('new-file-btn');
+const browseBtn     = document.getElementById('browse-btn');
+const fileInput     = document.getElementById('file-input');
+const dropZone      = document.getElementById('drop-zone');
+const bSlider       = document.getElementById('brightness-slider');
+const bVal          = document.getElementById('brightness-value');
+const hSlider       = document.getElementById('height-slider');
+const hVal          = document.getElementById('height-value');
+
+// Renderer
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.LinearToneMapping;
+renderer.toneMappingExposure = 3.0;
+
+// Szene
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x1a1510);
+scene.fog = new THREE.Fog(0x1a1510, 8, 25);
+
+// Kamera
+const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.05, 50);
+scene.add(camera);
+
+// Beleuchtung
+const ambientLight = new THREE.AmbientLight(0xffffff, 3.0);
+scene.add(ambientLight);
+const dirLight = new THREE.DirectionalLight(0xffffff, 2.0);
+dirLight.position.set(3, 6, 3);
+dirLight.castShadow = true;
+dirLight.shadow.mapSize.set(1024, 1024);
+dirLight.shadow.camera.near = 0.1;
+dirLight.shadow.camera.far = 20;
+dirLight.shadow.camera.left = -8;
+dirLight.shadow.camera.right = 8;
+dirLight.shadow.camera.top = 8;
+dirLight.shadow.camera.bottom = -8;
+scene.add(dirLight);
+
+// PointerLockControls
+const controls = new PointerLockControls(camera, document.body);
+scene.add(controls.getObject());
+
+let EYE_HEIGHT = 1.60;
+let lastFloorY = 0;
+let collisionMeshes = [];
+let currentModel = null;
+let animRunning = false;
+
+// Regler
+bSlider.addEventListener('input', () => {
+  const val = parseFloat(bSlider.value);
+  renderer.toneMappingExposure = val;
+  ambientLight.intensity = val;
+  bVal.textContent = val.toFixed(1);
+});
+hSlider.addEventListener('input', () => {
+  const val = parseFloat(hSlider.value);
+  EYE_HEIGHT = val;
+  hVal.textContent = val.toFixed(2) + ' m';
+  controls.getObject().position.y = lastFloorY + EYE_HEIGHT;
+});
+
+// Hintergrundfarbe
+const bgColor = document.getElementById('bg-color');
+bgColor.addEventListener('input', () => {
+  const col = new THREE.Color(bgColor.value);
+  scene.background = col;
+  scene.fog = new THREE.Fog(col, 8, 25);
+});
+
+// PointerLock Events
+startBtn.addEventListener('click', () => controls.lock());
+controls.addEventListener('lock', () => {
+  overlayEl.classList.add('hidden');
+  crosshair.classList.add('visible');
+  escHint.classList.add('visible');
+});
+controls.addEventListener('unlock', () => {
+  overlayEl.classList.remove('hidden');
+  crosshair.classList.remove('visible');
+  escHint.classList.remove('visible');
+});
+
+// Neue Datei laden
+newFileBtn.addEventListener('click', () => {
+  controls.unlock();
+  overlayEl.classList.add('hidden');
+  uploadScreen.classList.remove('hidden');
+  // Altes Modell entfernen
+  if (currentModel) {
+    scene.remove(currentModel);
+    currentModel = null;
+    collisionMeshes = [];
+  }
+});
+
+// Drag & Drop
+dropZone.addEventListener('dragover', e => {
+  e.preventDefault();
+  dropZone.classList.add('dragover');
+});
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropZone.classList.remove('dragover');
+  const file = e.dataTransfer.files[0];
+  if (file && file.name.toLowerCase().endsWith('.glb')) {
+    loadGLBFromFile(file);
+  }
+});
+
+// Klick auf Drop-Zone oder Button
+dropZone.addEventListener('click', () => fileInput.click());
+browseBtn.addEventListener('click', () => fileInput.click());
+fileInput.addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (file) loadGLBFromFile(file);
+  fileInput.value = '';
+});
+
+// GLB aus File-Objekt laden (kein Server noetig)
+function loadGLBFromFile(file) {
+  uploadScreen.classList.add('hidden');
+  loaderEl.classList.remove('hidden');
+  progressBar.style.width = '0%';
+  statusText.textContent = 'Lese Datei ...';
+
+  const reader = new FileReader();
+  reader.onprogress = e => {
+    if (e.lengthComputable) {
+      const pct = (e.loaded / e.total) * 50;
+      progressBar.style.width = pct.toFixed(0) + '%';
+      statusText.textContent = 'Lese Datei ... ' + pct.toFixed(0) + ' %';
+    }
+  };
+  reader.onload = e => {
+    statusText.textContent = 'Verarbeite Modell ...';
+    progressBar.style.width = '60%';
+    const arrayBuffer = e.target.result;
+    const loader = new GLTFLoader();
+    loader.parse(
+      arrayBuffer,
+      '',
+      (gltf) => {
+        progressBar.style.width = '100%';
+        statusText.textContent = 'Bereit';
+        setupModel(gltf, file.name);
+      },
+      (err) => {
+        console.error('Fehler:', err);
+        statusText.textContent = 'Fehler beim Laden!';
+        setTimeout(() => {
+          loaderEl.classList.add('hidden');
+          uploadScreen.classList.remove('hidden');
+        }, 2000);
+      }
+    );
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+// Modell in Szene einbauen
+function setupModel(gltf, filename) {
+  if (currentModel) scene.remove(currentModel);
+  collisionMeshes = [];
+
+  const model = gltf.scene;
+  currentModel = model;
+
+  model.traverse(child => {
+    if (child.isMesh) {
+      child.castShadow    = true;
+      child.receiveShadow = true;
+      collisionMeshes.push(child);
+    }
+  });
+  scene.add(model);
+
+  // Startposition: hoechsten Boden suchen (Erdgeschoss)
+  const box    = new THREE.Box3().setFromObject(model);
+  const center = box.getCenter(new THREE.Vector3());
+  const boxMax = box.max.y;
+  const startRay = new THREE.Raycaster(
+    new THREE.Vector3(center.x, boxMax + 1.0, center.z),
+    new THREE.Vector3(0, -1, 0),
+    0,
+    (boxMax - box.min.y) + 2.0
+  );
+  const startHits = startRay.intersectObjects(collisionMeshes, true);
+  lastFloorY = box.min.y;
+  if (startHits.length > 0) {
+    lastFloorY = Math.max(...startHits.map(h => h.point.y));
+  }
+  controls.getObject().position.set(center.x, lastFloorY + EYE_HEIGHT, center.z);
+
+  // Dateiname als Titel anzeigen
+  overlayTitle.textContent = filename.replace('.glb', '').replace('.GLB', '');
+
+  loaderEl.classList.add('hidden');
+  overlayEl.classList.remove('hidden');
+
+  if (!animRunning) {
+    animRunning = true;
+    animate();
+  }
+}
+
+// Kollision
+const wallRaycaster  = new THREE.Raycaster();
+const floorRaycaster = new THREE.Raycaster();
+const DOWN           = new THREE.Vector3(0, -1, 0);
+const WALL_MARGIN    = 0.35;
+const MOVE_SPEED     = 3.5;
+const FLOOR_SEARCH   = 5.0;
+
+function isBlocked(origin, dir) {
+  wallRaycaster.set(origin, dir);
+  wallRaycaster.far = WALL_MARGIN;
+  return wallRaycaster.intersectObjects(collisionMeshes, true).length > 0;
+}
+
+function groundHeight(pos) {
+  const searchStart = 0.05;
+  const origin = new THREE.Vector3(pos.x, pos.y - searchStart, pos.z);
+  floorRaycaster.set(origin, DOWN);
+  floorRaycaster.far = FLOOR_SEARCH;
+  const hits = floorRaycaster.intersectObjects(collisionMeshes, true);
+  if (hits.length > 0) {
+    lastFloorY = (pos.y - searchStart) - hits[0].distance;
+    const targetY = lastFloorY + EYE_HEIGHT;
+    const diff = targetY - pos.y;
+    if (Math.abs(diff) > 1.0) return pos.y + diff * 0.5;
+    return pos.y + diff * 0.15;
+  }
+  return pos.y;
+}
+
+// Tastatur
+const keys = { w: false, a: false, s: false, d: false };
+document.addEventListener('keydown', e => {
+  if (e.code === 'KeyW' || e.code === 'ArrowUp')    keys.w = true;
+  if (e.code === 'KeyA' || e.code === 'ArrowLeft')  keys.a = true;
+  if (e.code === 'KeyS' || e.code === 'ArrowDown')  keys.s = true;
+  if (e.code === 'KeyD' || e.code === 'ArrowRight') keys.d = true;
+});
+document.addEventListener('keyup', e => {
+  if (e.code === 'KeyW' || e.code === 'ArrowUp')    keys.w = false;
+  if (e.code === 'KeyA' || e.code === 'ArrowLeft')  keys.a = false;
+  if (e.code === 'KeyS' || e.code === 'ArrowDown')  keys.s = false;
+  if (e.code === 'KeyD' || e.code === 'ArrowRight') keys.d = false;
+});
+
+// Bewegung
+const tmpVec  = new THREE.Vector3();
+const moveDir = new THREE.Vector3();
+
+function updateMovement(delta) {
+  if (!controls.isLocked) return;
+  const pivot = controls.getObject();
+  const speed = MOVE_SPEED * delta;
+
+  camera.getWorldDirection(tmpVec);
+  tmpVec.y = 0;
+  tmpVec.normalize();
+  const right = new THREE.Vector3().crossVectors(tmpVec, camera.up).normalize();
+
+  moveDir.set(0, 0, 0);
+  if (keys.w) moveDir.addScaledVector(tmpVec,  1);
+  if (keys.s) moveDir.addScaledVector(tmpVec, -1);
+  if (keys.a) moveDir.addScaledVector(right,  -1);
+  if (keys.d) moveDir.addScaledVector(right,   1);
+  if (moveDir.lengthSq() === 0) return;
+  moveDir.normalize();
+
+  const posX = pivot.position.clone().addScaledVector(new THREE.Vector3(moveDir.x, 0, 0), WALL_MARGIN + 0.01);
+  if (!isBlocked(posX, new THREE.Vector3(moveDir.x, 0, 0).normalize())) {
+    pivot.position.x += moveDir.x * speed;
+  }
+  const posZ = pivot.position.clone().addScaledVector(new THREE.Vector3(0, 0, moveDir.z), WALL_MARGIN + 0.01);
+  if (!isBlocked(posZ, new THREE.Vector3(0, 0, moveDir.z).normalize())) {
+    pivot.position.z += moveDir.z * speed;
+  }
+  if (collisionMeshes.length > 0) {
+    pivot.position.y = groundHeight(pivot.position);
+  }
+}
+
+// Render-Loop
+const clock = new THREE.Clock();
+function animate() {
+  requestAnimationFrame(animate);
+  updateMovement(clock.getDelta());
+  renderer.render(scene, camera);
+}
+
+// Resize
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+</script>
+</body>
+</html>
