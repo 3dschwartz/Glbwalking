@@ -38,19 +38,6 @@ body{background:#0a0a0a;font-family:'Courier New',monospace;color:#e0e0e0;overfl
 .slider-row span{font-size:0.75rem;color:#c8b89a;width:36px;text-align:left}
 .divider{width:280px;height:1px;background:#222;margin:2px 0}
 
-/* Toggle IBL */
-.toggle-row{display:flex;align-items:center;gap:12px}
-.toggle-row label.desc{font-size:0.75rem;letter-spacing:0.12em;color:#888;text-transform:uppercase;white-space:nowrap;width:110px;text-align:right}
-.toggle-wrap{display:flex;align-items:center;gap:10px}
-.toggle{position:relative;width:44px;height:24px;cursor:pointer}
-.toggle input{opacity:0;width:0;height:0;position:absolute}
-.toggle-track{position:absolute;inset:0;background:#2a2a2a;border:1px solid #444;transition:background 0.2s}
-.toggle input:checked + .toggle-track{background:#3a3020;border-color:#c8b89a}
-.toggle-thumb{position:absolute;top:3px;left:3px;width:16px;height:16px;background:#555;transition:left 0.2s,background 0.2s}
-.toggle input:checked ~ .toggle-thumb{left:23px;background:#c8b89a}
-.toggle-label{font-size:0.72rem;color:#555;letter-spacing:0.1em;text-transform:uppercase;transition:color 0.2s;width:60px}
-.toggle-label.on{color:#c8b89a}
-
 .btn-row{display:flex;gap:12px;margin-top:6px}
 .start-btn{padding:10px 32px;background:transparent;border:1px solid #c8b89a;color:#c8b89a;font-family:'Courier New',monospace;font-size:0.75rem;letter-spacing:0.25em;text-transform:uppercase;cursor:pointer;transition:background 0.2s,color 0.2s}
 .start-btn:hover{background:#c8b89a;color:#0a0a0a}
@@ -102,6 +89,11 @@ body{background:#0a0a0a;font-family:'Courier New',monospace;color:#e0e0e0;overfl
     <span id="brightness-value">3.0</span>
   </div>
   <div class="slider-row">
+    <label for="ibl-strength">&#10022; IBL St&auml;rke</label>
+    <input type="range" id="ibl-strength" min="0" max="3" step="0.1" value="1.0" />
+    <span id="ibl-strength-value">1.0</span>
+  </div>
+  <div class="slider-row">
     <label for="height-slider">&#8597; Augenh&ouml;he</label>
     <input type="range" id="height-slider" min="0.5" max="2.5" step="0.05" value="1.60" />
     <span id="height-value">1.60 m</span>
@@ -110,26 +102,6 @@ body{background:#0a0a0a;font-family:'Courier New',monospace;color:#e0e0e0;overfl
     <label for="bg-color">&#9632; Hintergrund</label>
     <input type="color" id="bg-color" value="#1a1510" style="width:50px;height:28px;border:1px solid #444;background:none;cursor:pointer;padding:2px" />
     <span style="font-size:0.7rem;color:#555;letter-spacing:0.05em">Farbe</span>
-  </div>
-
-  <!-- IBL Toggle -->
-  <div class="toggle-row">
-    <label class="desc" for="ibl-toggle">&#10022; IBL Licht</label>
-    <div class="toggle-wrap">
-      <label class="toggle">
-        <input type="checkbox" id="ibl-toggle" />
-        <div class="toggle-track"></div>
-        <div class="toggle-thumb"></div>
-      </label>
-      <span class="toggle-label" id="ibl-label">AUS</span>
-    </div>
-  </div>
-
-  <!-- IBL Staerke -->
-  <div class="slider-row" id="ibl-strength-row" style="display:none">
-    <label for="ibl-strength">&#10022; IBL St&auml;rke</label>
-    <input type="range" id="ibl-strength" min="0.1" max="3" step="0.1" value="1.0" />
-    <span id="ibl-strength-value">1.0</span>
   </div>
 
   <div class="divider"></div>
@@ -157,7 +129,6 @@ body{background:#0a0a0a;font-family:'Courier New',monospace;color:#e0e0e0;overfl
 import * as THREE from 'three';
 import { GLTFLoader }          from 'three/addons/loaders/GLTFLoader.js';
 import { PointerLockControls } from 'three/addons/controls/PointerLockControls.js';
-import { RGBELoader }          from 'three/addons/loaders/RGBELoader.js';
 
 // DOM
 const canvas       = document.getElementById('canvas');
@@ -179,9 +150,6 @@ const bVal         = document.getElementById('brightness-value');
 const hSlider      = document.getElementById('height-slider');
 const hVal         = document.getElementById('height-value');
 const bgColor      = document.getElementById('bg-color');
-const iblToggle    = document.getElementById('ibl-toggle');
-const iblLabel     = document.getElementById('ibl-label');
-const iblStrengthRow = document.getElementById('ibl-strength-row');
 const iblStrength  = document.getElementById('ibl-strength');
 const iblStrengthVal = document.getElementById('ibl-strength-value');
 
@@ -204,10 +172,10 @@ scene.fog = new THREE.Fog(currentBgColor, 8, 25);
 const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.05, 50);
 scene.add(camera);
 
-// Beleuchtung (aktiv wenn IBL aus)
-const ambientLight = new THREE.AmbientLight(0xffffff, 3.0);
+// Grundbeleuchtung (immer aktiv, reagiert auf Helligkeitsregler)
+const ambientLight = new THREE.AmbientLight(0xffffff, 1.5);
 scene.add(ambientLight);
-const dirLight = new THREE.DirectionalLight(0xffffff, 2.0);
+const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
 dirLight.position.set(3, 6, 3);
 dirLight.castShadow = true;
 dirLight.shadow.mapSize.set(1024, 1024);
@@ -217,64 +185,30 @@ dirLight.shadow.camera.left = dirLight.shadow.camera.bottom = -8;
 dirLight.shadow.camera.right = dirLight.shadow.camera.top  =  8;
 scene.add(dirLight);
 
-// IBL — neutrales Studio-HDRI wird per Data-URL eingebettet
-// Kleines 64x32px neutrales grau-weisses HDRI (Base64, .hdr Format)
-// Wird on-demand generiert ohne externen Download
-let iblTexture = null;
+// IBL — neutrales Studio-Umgebungslicht, immer aktiv, Staerke regelbar
 const pmremGenerator = new THREE.PMREMGenerator(renderer);
 pmremGenerator.compileEquirectangularShader();
 
-// Neutrales weisses IBL per generierter DataTexture (kein HDRI-File noetig)
 function buildNeutralIBL() {
-  if (iblTexture) return iblTexture;
-  // 4x2 Pixel neutrale weisse Equirectangular Textur als IBL
   const w = 64, h = 32;
   const data = new Float32Array(w * h * 4);
   for (let i = 0; i < w * h; i++) {
-    // Oben (Himmel): helles Weiss, unten (Boden): etwas dunkler
     const y = Math.floor(i / w) / h;
     const brightness = y < 0.5 ? 1.2 : 0.6;
-    data[i * 4 + 0] = brightness;
-    data[i * 4 + 1] = brightness;
-    data[i * 4 + 2] = brightness;
-    data[i * 4 + 3] = 1.0;
+    data[i*4]=data[i*4+1]=data[i*4+2]=brightness;
+    data[i*4+3]=1.0;
   }
   const tex = new THREE.DataTexture(data, w, h, THREE.RGBAFormat, THREE.FloatType);
   tex.mapping = THREE.EquirectangularReflectionMapping;
   tex.needsUpdate = true;
-  iblTexture = pmremGenerator.fromEquirectangular(tex).texture;
+  const envTex = pmremGenerator.fromEquirectangular(tex).texture;
   tex.dispose();
-  return iblTexture;
+  return envTex;
 }
 
-function setIBL(enabled) {
-  if (enabled) {
-    scene.environment    = buildNeutralIBL();
-    scene.environmentIntensity = parseFloat(iblStrength.value);
-    ambientLight.intensity = 0.3;
-    dirLight.intensity     = 0.5;
-    renderer.toneMapping   = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = parseFloat(bSlider.value) * 0.5;
-    iblLabel.textContent = 'EIN';
-    iblLabel.classList.add('on');
-    iblStrengthRow.style.display = 'flex';
-  } else {
-    scene.environment      = null;
-    ambientLight.intensity = parseFloat(bSlider.value);
-    dirLight.intensity     = 2.0;
-    renderer.toneMapping   = THREE.LinearToneMapping;
-    renderer.toneMappingExposure = parseFloat(bSlider.value);
-    iblLabel.textContent = 'AUS';
-    iblLabel.classList.remove('on');
-    iblStrengthRow.style.display = 'none';
-  }
-}
-
-iblStrength.addEventListener('input', () => {
-  const val = parseFloat(iblStrength.value);
-  iblStrengthVal.textContent = val.toFixed(1);
-  if (iblToggle.checked) scene.environmentIntensity = val;
-});
+const iblTexture = buildNeutralIBL();
+scene.environment = iblTexture;
+scene.environmentIntensity = 1.0;
 
 // PointerLockControls
 const controls = new PointerLockControls(camera, document.body);
@@ -286,16 +220,20 @@ let collisionMeshes = [];
 let currentModel = null;
 let animRunning = false;
 
-// Regler
+// Helligkeit (Ambient + Directional + Belichtung gemeinsam)
 bSlider.addEventListener('input', () => {
   const val = parseFloat(bSlider.value);
   bVal.textContent = val.toFixed(1);
-  if (iblToggle.checked) {
-    renderer.toneMappingExposure = val * 0.5;
-  } else {
-    renderer.toneMappingExposure = val;
-    ambientLight.intensity = val;
-  }
+  renderer.toneMappingExposure = val * 0.5;
+  ambientLight.intensity = val * 0.5;
+  dirLight.intensity = val * 0.4;
+});
+
+// IBL Staerke — eigener Regler, unabhaengig von Helligkeit
+iblStrength.addEventListener('input', () => {
+  const val = parseFloat(iblStrength.value);
+  iblStrengthVal.textContent = val.toFixed(1);
+  scene.environmentIntensity = val;
 });
 
 hSlider.addEventListener('input', () => {
@@ -310,8 +248,6 @@ bgColor.addEventListener('input', () => {
   scene.background = currentBgColor;
   scene.fog = new THREE.Fog(currentBgColor, 8, 25);
 });
-
-iblToggle.addEventListener('change', () => setIBL(iblToggle.checked));
 
 // PointerLock
 startBtn.addEventListener('click', () => controls.lock());
@@ -408,9 +344,6 @@ function setupModel(gltf, filename) {
   overlayTitle.textContent = filename.replace(/\.glb$/i, '');
   loaderEl.classList.add('hidden');
   overlayEl.classList.remove('hidden');
-
-  // IBL-Status anwenden
-  setIBL(iblToggle.checked);
 
   if (!animRunning) { animRunning = true; animate(); }
 }
