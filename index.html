@@ -56,16 +56,16 @@ body{background:#ffffff;font-family:'Courier New',monospace;color:#e0e0e0;overfl
 #esc-hint.visible{opacity:1}
 
 /* Touch-Joystick Bewegung (links) */
-#joystick-move{position:fixed;left:30px;bottom:40px;width:110px;height:110px;z-index:20;display:none}
+#joystick-move{position:fixed;left:20px;bottom:40px;width:110px;height:110px;z-index:20;display:none}
 #joy-move-base{position:absolute;inset:0;border-radius:50%;border:2px solid rgba(80,140,255,0.5);background:rgba(80,140,255,0.08)}
 #joy-move-knob{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:44px;height:44px;border-radius:50%;background:rgba(80,140,255,0.6);pointer-events:none}
 #joy-move-label{position:absolute;bottom:-22px;left:50%;transform:translateX(-50%);font-size:0.55rem;letter-spacing:0.1em;color:rgba(80,140,255,0.6);text-transform:uppercase;white-space:nowrap}
 
-/* Touch-Joystick Drehen (rechts daneben) */
-#joystick-turn{position:fixed;left:160px;bottom:40px;width:110px;height:110px;z-index:20;display:none}
-#joy-turn-base{position:absolute;inset:0;border-radius:50%;border:2px solid rgba(200,184,154,0.5);background:rgba(200,184,154,0.08)}
-#joy-turn-knob{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:44px;height:44px;border-radius:50%;background:rgba(200,184,154,0.5);pointer-events:none}
-#joy-turn-label{position:absolute;bottom:-22px;left:50%;transform:translateX(-50%);font-size:0.55rem;letter-spacing:0.1em;color:rgba(200,184,154,0.6);text-transform:uppercase;white-space:nowrap}
+/* Touch-Joystick Drehen (rechts) */
+#joystick-turn{position:fixed;right:20px;bottom:40px;width:110px;height:110px;z-index:20;display:none}
+#joy-turn-base{position:absolute;inset:0;border-radius:50%;border:2px solid rgba(80,140,255,0.5);background:rgba(80,140,255,0.08)}
+#joy-turn-knob{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:44px;height:44px;border-radius:50%;background:rgba(80,140,255,0.6);pointer-events:none}
+#joy-turn-label{position:absolute;bottom:-22px;left:50%;transform:translateX(-50%);font-size:0.55rem;letter-spacing:0.1em;color:rgba(80,140,255,0.6);text-transform:uppercase;white-space:nowrap}
 
 /* Pause-Button (Touch) */
 #pause-btn{position:fixed;top:14px;right:16px;z-index:30;display:none;padding:8px 16px;background:rgba(10,10,10,0.6);border:1px solid #444;color:#888;font-family:'Courier New',monospace;font-size:0.65rem;letter-spacing:0.15em;text-transform:uppercase;cursor:pointer;backdrop-filter:blur(4px)}
@@ -473,7 +473,15 @@ function isBlocked(origin,dir){ wallRay.set(origin,dir); wallRay.far=WALL_MARGIN
 function groundHeight(pos){
   floorRay.set(new THREE.Vector3(pos.x,pos.y-0.05,pos.z),DOWN); floorRay.far=FLOOR_SEARCH;
   const hits=floorRay.intersectObjects(collisionMeshes,true);
-  if(hits.length>0){ lastFloorY=(pos.y-0.05)-hits[0].distance; const diff=(lastFloorY+EYE_HEIGHT)-pos.y; return pos.y+diff*(Math.abs(diff)>1?0.5:0.15); }
+  if(hits.length>0){
+    lastFloorY=(pos.y-0.05)-hits[0].distance;
+    const targetY = lastFloorY + EYE_HEIGHT;
+    const diff = targetY - pos.y;
+    // Schwellwert: unter 2mm nicht anpassen — verhindert Zittern auf ebenem Boden
+    if (Math.abs(diff) < 0.002) return pos.y;
+    if (Math.abs(diff) > 1.0) return pos.y + diff * 0.5;
+    return pos.y + diff * 0.15;
+  }
   return pos.y;
 }
 
