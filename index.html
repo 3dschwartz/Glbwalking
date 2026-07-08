@@ -236,8 +236,23 @@ scene.environmentIntensity=0.2;
 // ── PointerLockControls ──────────────────────────────────────────
 const controls = new PointerLockControls(camera, document.body);
 scene.add(controls.getObject());
-// Internen Maus-Handler deaktivieren — wir verwenden eigenen geglätteten Handler
+// Internen Maus-Handler deaktivieren — eigener geglätteter Handler übernimmt
 controls.disconnect();
+
+// Pointer Lock manuell verwalten (da controls.disconnect() auch lock() bricht)
+function requestLock() {
+  document.body.requestPointerLock();
+}
+document.addEventListener('pointerlockchange', () => {
+  if (document.pointerLockElement === document.body) {
+    hideOverlay();
+  } else {
+    showOverlay();
+  }
+});
+document.addEventListener('pointerlockerror', () => {
+  console.warn('Pointer Lock fehlgeschlagen');
+});
 
 // ── Geglättete Maussteuerung (Desktop) ──────────────────────────
 // Eigener mousemove-Handler statt PointerLockControls intern
@@ -245,8 +260,10 @@ controls.disconnect();
 let targetYaw=0, targetPitch=0, currentYaw=0, currentPitch=0, mouseInited=false;
 const MOUSE_SMOOTH = 0.10; // Glättungsfaktor: 0=sofort, höher=weicher
 
+function isLocked() { return document.pointerLockElement === document.body; }
+
 document.addEventListener('mousemove', e => {
-  if (!controls.isLocked || isTouch) return;
+  if (!isLocked() || isTouch) return;
   if (!mouseInited) {
     targetYaw=currentYaw=controls.getObject().rotation.y;
     targetPitch=currentPitch=camera.rotation.x;
@@ -258,7 +275,7 @@ document.addEventListener('mousemove', e => {
 });
 
 function applyMouseSmoothing() {
-  if (!controls.isLocked || !mouseInited || isTouch) return;
+  if (!isLocked() || !mouseInited || isTouch) return;
   const f = 1 - MOUSE_SMOOTH;
   currentYaw   += (targetYaw   - currentYaw)   * f;
   currentPitch += (targetPitch - currentPitch) * f;
@@ -301,15 +318,14 @@ function hideOverlay(){
 }
 
 if(!isTouch){
-  startBtn.addEventListener('click', ()=>controls.lock());
-  controls.addEventListener('lock',   hideOverlay);
-  controls.addEventListener('unlock', showOverlay);
+  startBtn.addEventListener('click', ()=>requestLock());
+  // lock/unlock Events kommen von pointerlockchange oben
 }else{
   startBtn.addEventListener('click', hideOverlay);
   pauseBtn.addEventListener('click',  showOverlay);
 }
 newFileBtn.addEventListener('click',()=>{
-  if(!isTouch) controls.unlock(); else showOverlay();
+  if(!isTouch) document.exitPointerLock(); else showOverlay();
   overlayEl.classList.add('hidden'); uploadScreen.classList.remove('hidden');
   if(currentModel){scene.remove(currentModel);currentModel=null;collisionMeshes=[];}
 });
@@ -440,7 +456,7 @@ function updateMovement(delta){
   moveDir.set(0,0,0);
 
   if(!isTouch){
-    if(!controls.isLocked)return;
+    if(!isLocked())return;
     if(keys.w)moveDir.addScaledVector(tmpVec, 1);
     if(keys.s)moveDir.addScaledVector(tmpVec,-1);
     if(keys.a)moveDir.addScaledVector(right, -1);
