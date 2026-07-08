@@ -250,9 +250,9 @@ document.addEventListener('mousemove', e => {
     targetPitch=currentPitch=camera.rotation.x;
     mouseInited=true;
   }
-  targetYaw   -= e.movementX * 0.0018;
-  targetPitch -= e.movementY * 0.0018;
-  targetPitch  = Math.max(-Math.PI/2.2, Math.min(Math.PI/2.2, targetPitch));
+  // Nur horizontale Drehung — vertikal gesperrt
+  targetYaw -= e.movementX * 0.0018;
+  // targetPitch bleibt unverändert → kein Blick nach oben/unten
 });
 
 function applyMouseSmoothing() {
@@ -447,7 +447,7 @@ function updateMovement(delta){
     if(!touchActive)return;
     if(Math.abs(move.y)>0.1)moveDir.addScaledVector(tmpVec,-move.y);
     // Reduzierte Drehgeschwindigkeit auf Touch
-    if(Math.abs(turn.x)>0.1)controls.getObject().rotation.y-=turn.x*0.018;
+    if(Math.abs(turn.x)>0.1)controls.getObject().rotation.y-=turn.x*0.015;
   }
 
   if(moveDir.lengthSq()===0)return;
