@@ -55,13 +55,17 @@ body{background:#ffffff;font-family:'Courier New',monospace;color:#e0e0e0;overfl
 #esc-hint{position:fixed;top:14px;right:16px;font-size:0.65rem;letter-spacing:0.15em;color:#555;text-transform:uppercase;pointer-events:none;z-index:10;opacity:0;transition:opacity 0.3s ease}
 #esc-hint.visible{opacity:1}
 
-/* Touch-Joystick links */
-#joystick-zone{position:fixed;left:0;bottom:0;width:50%;height:50%;z-index:20;display:none}
-#joystick-base{position:absolute;left:60px;bottom:60px;width:100px;height:100px;border-radius:50%;border:2px solid rgba(200,184,154,0.3);background:rgba(200,184,154,0.05);pointer-events:none}
-#joystick-knob{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:40px;height:40px;border-radius:50%;background:rgba(200,184,154,0.5);pointer-events:none}
+/* Touch-Joystick Bewegung (links) */
+#joystick-move{position:fixed;left:30px;bottom:40px;width:110px;height:110px;z-index:20;display:none}
+#joy-move-base{position:absolute;inset:0;border-radius:50%;border:2px solid rgba(80,140,255,0.5);background:rgba(80,140,255,0.08)}
+#joy-move-knob{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:44px;height:44px;border-radius:50%;background:rgba(80,140,255,0.6);pointer-events:none}
+#joy-move-label{position:absolute;bottom:-22px;left:50%;transform:translateX(-50%);font-size:0.55rem;letter-spacing:0.1em;color:rgba(80,140,255,0.6);text-transform:uppercase;white-space:nowrap}
 
-/* Touch-Look rechts */
-#look-zone{position:fixed;right:0;bottom:0;width:50%;height:100%;z-index:20;display:none}
+/* Touch-Joystick Drehen (rechts daneben) */
+#joystick-turn{position:fixed;left:160px;bottom:40px;width:110px;height:110px;z-index:20;display:none}
+#joy-turn-base{position:absolute;inset:0;border-radius:50%;border:2px solid rgba(200,184,154,0.5);background:rgba(200,184,154,0.08)}
+#joy-turn-knob{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:44px;height:44px;border-radius:50%;background:rgba(200,184,154,0.5);pointer-events:none}
+#joy-turn-label{position:absolute;bottom:-22px;left:50%;transform:translateX(-50%);font-size:0.55rem;letter-spacing:0.1em;color:rgba(200,184,154,0.6);text-transform:uppercase;white-space:nowrap}
 
 /* Pause-Button (Touch) */
 #pause-btn{position:fixed;top:14px;right:16px;z-index:30;display:none;padding:8px 16px;background:rgba(10,10,10,0.6);border:1px solid #444;color:#888;font-family:'Courier New',monospace;font-size:0.65rem;letter-spacing:0.15em;text-transform:uppercase;cursor:pointer;backdrop-filter:blur(4px)}
@@ -130,11 +134,15 @@ body{background:#ffffff;font-family:'Courier New',monospace;color:#e0e0e0;overfl
 <canvas id="canvas"></canvas>
 <div id="esc-hint">ESC - Pause</div>
 
-<!-- Touch-Elemente -->
-<div id="joystick-zone">
-  <div id="joystick-base"><div id="joystick-knob"></div></div>
+<!-- Touch-Joysticks -->
+<div id="joystick-move" style="display:none">
+  <div id="joy-move-base"><div id="joy-move-knob"></div></div>
+  <div id="joy-move-label">vor / zur&#252;ck</div>
 </div>
-<div id="look-zone"></div>
+<div id="joystick-turn" style="display:none">
+  <div id="joy-turn-base"><div id="joy-turn-knob"></div></div>
+  <div id="joy-turn-label">drehen</div>
+</div>
 <button id="pause-btn">&#9776; Pause</button>
 
 <div id="info"></div>
@@ -178,10 +186,10 @@ const hVal          = document.getElementById('height-value');
 const bgColor       = document.getElementById('bg-color');
 const iblStrength   = document.getElementById('ibl-strength');
 const iblStrVal     = document.getElementById('ibl-strength-value');
-const joystickZone  = document.getElementById('joystick-zone');
-const joystickBase  = document.getElementById('joystick-base');
-const joystickKnob  = document.getElementById('joystick-knob');
-const lookZone      = document.getElementById('look-zone');
+const joystickMove  = document.getElementById('joystick-move');
+const joyMoveKnob   = document.getElementById('joy-move-knob');
+const joystickTurn  = document.getElementById('joystick-turn');
+const joyTurnKnob   = document.getElementById('joy-turn-knob');
 const pauseBtn      = document.getElementById('pause-btn');
 const infoEl        = document.getElementById('info');
 const desktopHint   = document.getElementById('desktop-hint');
@@ -292,12 +300,22 @@ function showOverlay() {
   overlayEl.classList.remove('hidden');
   crosshair.classList.remove('visible');
   escHint.classList.remove('visible');
-  if (isTouch) { joystickZone.style.display='none'; lookZone.style.display='none'; pauseBtn.style.display='none'; touchActive=false; }
+  if (isTouch) {
+    joystickMove.style.display='none';
+    joystickTurn.style.display='none';
+    pauseBtn.style.display='none';
+    touchActive=false;
+  }
 }
 function hideOverlay() {
   overlayEl.classList.add('hidden');
   if (!isTouch) { crosshair.classList.add('visible'); escHint.classList.add('visible'); }
-  else { joystickZone.style.display='block'; lookZone.style.display='block'; pauseBtn.style.display='block'; touchActive=true; }
+  else {
+    joystickMove.style.display='block';
+    joystickTurn.style.display='block';
+    pauseBtn.style.display='block';
+    touchActive=true;
+  }
 }
 
 if (!isTouch) {
@@ -332,70 +350,53 @@ document.addEventListener('keyup', e => {
 });
 
 // ── Touch-Steuerung ──────────────────────────────────────────────
-const touch = {
-  joyId:   null, joyStartX:0, joyStartY:0, joyX:0, joyY:0,  // Joystick
-  lookId:  null, lookLastX:0, lookLastY:0                      // Umsehen
-};
-const LOOK_SENS  = 0.003;
-const JOY_RADIUS = 40;
+// ── Touch-Steuerung: 2 Joysticks ────────────────────────────────
+const JOY_RADIUS = 38;
+const move = { id:null, x:0, y:0 };
+const turn = { id:null, x:0 };
 
-joystickZone.addEventListener('touchstart', e => {
-  e.preventDefault();
-  const t = e.changedTouches[0];
-  const rect = joystickBase.getBoundingClientRect();
-  touch.joyId     = t.identifier;
-  touch.joyStartX = rect.left + rect.width/2;
-  touch.joyStartY = rect.top  + rect.height/2;
-  touch.joyX = touch.joyY = 0;
-}, {passive:false});
+function joystickHandler(el, knob, store, onlyY) {
+  const getCenter = () => { const r=el.getBoundingClientRect(); return {x:r.left+r.width/2, y:r.top+r.height/2}; };
 
-joystickZone.addEventListener('touchmove', e => {
-  e.preventDefault();
-  for (const t of e.changedTouches) {
-    if (t.identifier !== touch.joyId) continue;
-    let dx = t.clientX - touch.joyStartX;
-    let dy = t.clientY - touch.joyStartY;
-    const len = Math.sqrt(dx*dx+dy*dy);
-    if (len > JOY_RADIUS) { dx=dx/len*JOY_RADIUS; dy=dy/len*JOY_RADIUS; }
-    touch.joyX = dx/JOY_RADIUS;
-    touch.joyY = dy/JOY_RADIUS;
-    joystickKnob.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
-  }
-}, {passive:false});
+  el.addEventListener('touchstart', e => {
+    e.preventDefault();
+    if (store.id !== null) return;
+    const t = e.changedTouches[0];
+    store.id = t.identifier;
+    store.x  = 0; store.y = 0;
+  }, {passive:false});
 
-joystickZone.addEventListener('touchend', e => {
-  for (const t of e.changedTouches) {
-    if (t.identifier !== touch.joyId) continue;
-    touch.joyId=null; touch.joyX=0; touch.joyY=0;
-    joystickKnob.style.transform='translate(-50%,-50%)';
-  }
-});
+  el.addEventListener('touchmove', e => {
+    e.preventDefault();
+    for (const t of e.changedTouches) {
+      if (t.identifier !== store.id) continue;
+      const c  = getCenter();
+      let dx   = t.clientX - c.x;
+      let dy   = t.clientY - c.y;
+      const len = Math.sqrt(dx*dx + dy*dy);
+      if (len > JOY_RADIUS) { dx=dx/len*JOY_RADIUS; dy=dy/len*JOY_RADIUS; }
+      // Linker Joystick: nur Y (vor/zurück), X ignorieren
+      store.x = onlyY ? 0 : dx / JOY_RADIUS;
+      store.y = dy / JOY_RADIUS;
+      knob.style.transform = onlyY
+        ? `translate(-50%, calc(-50% + ${dy}px))`
+        : `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
+    }
+  }, {passive:false});
 
-lookZone.addEventListener('touchstart', e => {
-  e.preventDefault();
-  const t = e.changedTouches[0];
-  touch.lookId    = t.identifier;
-  touch.lookLastX = t.clientX;
-  touch.lookLastY = t.clientY;
-}, {passive:false});
+  const end = e => {
+    for (const t of e.changedTouches) {
+      if (t.identifier !== store.id) continue;
+      store.id=null; store.x=0; store.y=0;
+      knob.style.transform='translate(-50%,-50%)';
+    }
+  };
+  el.addEventListener('touchend',    end);
+  el.addEventListener('touchcancel', end);
+}
 
-lookZone.addEventListener('touchmove', e => {
-  e.preventDefault();
-  for (const t of e.changedTouches) {
-    if (t.identifier !== touch.lookId) continue;
-    const dx = t.clientX - touch.lookLastX;
-    touch.lookLastX = t.clientX;
-    touch.lookLastY = t.clientY;
-    // Nur horizontale Drehung — vertikal gesperrt auf Touch
-    controls.getObject().rotation.y -= dx * LOOK_SENS * 2;
-  }
-}, {passive:false});
-
-lookZone.addEventListener('touchend', e => {
-  for (const t of e.changedTouches) {
-    if (t.identifier === touch.lookId) touch.lookId=null;
-  }
-});
+joystickHandler(joystickMove, joyMoveKnob, move, true);   // nur vor/zurück
+joystickHandler(joystickTurn, joyTurnKnob, turn, false);  // nur drehen (X)
 
 // ── Drag & Drop (Desktop) ────────────────────────────────────────
 dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
@@ -494,10 +495,13 @@ function updateMovement(delta){
     if(keys.a) moveDir.addScaledVector(right, -1);
     if(keys.d) moveDir.addScaledVector(right,  1);
   } else {
-    // Touch: Joystick
-    if(!touchActive) return;
-    if(Math.abs(touch.joyY)>0.1) moveDir.addScaledVector(tmpVec,-touch.joyY);
-    if(Math.abs(touch.joyX)>0.1) moveDir.addScaledVector(right,  touch.joyX);
+    // Touch: linker Joystick nur vor/zurück, rechter Joystick nur drehen
+    if (!touchActive) return;
+    if (Math.abs(move.y) > 0.1) moveDir.addScaledVector(tmpVec, -move.y);
+    // Drehen: rechter Joystick X dreht die Kamera horizontal
+    if (Math.abs(turn.x) > 0.1) {
+      controls.getObject().rotation.y -= turn.x * 0.03;
+    }
   }
 
   if(moveDir.lengthSq()===0) return;
