@@ -512,14 +512,17 @@ function updateMovement(delta){
     }
   }
 
-  if(moveDir.lengthSq()===0) return;
-  moveDir.normalize();
+  const isMoving = moveDir.lengthSq() > 0;
 
-  const px=pivot.position.clone().addScaledVector(new THREE.Vector3(moveDir.x,0,0),WALL_MARGIN+0.01);
-  if(!isBlocked(px,new THREE.Vector3(moveDir.x,0,0).normalize())) pivot.position.x+=moveDir.x*speed;
-  const pz=pivot.position.clone().addScaledVector(new THREE.Vector3(0,0,moveDir.z),WALL_MARGIN+0.01);
-  if(!isBlocked(pz,new THREE.Vector3(0,0,moveDir.z).normalize())) pivot.position.z+=moveDir.z*speed;
-  if(collisionMeshes.length>0) pivot.position.y=groundHeight(pivot.position);
+  if (isMoving) {
+    moveDir.normalize();
+    const px=pivot.position.clone().addScaledVector(new THREE.Vector3(moveDir.x,0,0),WALL_MARGIN+0.01);
+    if(!isBlocked(px,new THREE.Vector3(moveDir.x,0,0).normalize())) pivot.position.x+=moveDir.x*speed;
+    const pz=pivot.position.clone().addScaledVector(new THREE.Vector3(0,0,moveDir.z),WALL_MARGIN+0.01);
+    if(!isBlocked(pz,new THREE.Vector3(0,0,moveDir.z).normalize())) pivot.position.z+=moveDir.z*speed;
+    // Boden nur beim Bewegen prüfen — verhindert Zittern beim Umschauen
+    if(collisionMeshes.length>0) pivot.position.y=groundHeight(pivot.position);
+  }
 }
 
 // ── Render-Loop ──────────────────────────────────────────────────
