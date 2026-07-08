@@ -236,6 +236,8 @@ scene.environmentIntensity=0.2;
 // ── PointerLockControls ──────────────────────────────────────────
 const controls = new PointerLockControls(camera, document.body);
 scene.add(controls.getObject());
+// Internen Maus-Handler deaktivieren — wir verwenden eigenen geglätteten Handler
+controls.disconnect();
 
 // ── Geglättete Maussteuerung (Desktop) ──────────────────────────
 // Eigener mousemove-Handler statt PointerLockControls intern
