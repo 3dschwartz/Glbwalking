@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+<title>3D Raumbesichtigung</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{background:#ffffff;font-family:'Courier New',monospace;color:#e0e0e0;overflow:hidden;height:100dvh;touch-action:none}
+
+#loader{position:fixed;inset:0;background:#0a0a0a;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:24px;z-index:100;transition:opacity 0.6s ease}
+#loader.hidden{opacity:0;pointer-events:none}
+#loader h1{font-size:clamp(1.2rem,3vw,1.8rem);font-weight:400;letter-spacing:0.3em;text-transform:uppercase;color:#c8b89a}
+.progress-bar{width:min(320px,80vw);height:2px;background:#2a2a2a}
+.progress-fill{height:100%;background:#c8b89a;width:0%;transition:width 0.3s ease}
+#loader-status{font-size:0.75rem;letter-spacing:0.15em;color:#666}
+
+/* ── NEU: Startseite mit Raumauswahl ──────────────────────────── */
+#upload-screen{position:fixed;inset:0;background:#0a0a0a;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:28px;z-index:90;overflow-y:auto;padding:40px 20px}
+#upload-screen.hidden{display:none}
+#upload-screen h1{font-size:clamp(1.2rem,3vw,1.8rem);font-weight:400;letter-spacing:0.3em;text-transform:uppercase;color:#c8b89a}
+#upload-screen .subtitle{font-size:0.75rem;letter-spacing:0.2em;color:#555;text-transform:uppercase;margin-top:-18px}
+
+.room-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:14px;width:min(480px,85vw)}
+.room-card{padding:18px 14px;background:transparent;border:1px solid #333;display:flex;flex-direction:column;align-items:center;gap:8px;cursor:pointer;transition:border-color 0.2s,background 0.2s}
+.room-card:hover,.room-card:active{border-color:#c8b89a;background:rgba(200,184,154,0.05)}
+.room-card .room-num{font-size:0.65rem;letter-spacing:0.2em;color:#555;text-transform:uppercase}
+.room-card .room-name{font-size:0.78rem;letter-spacing:0.15em;color:#888;text-transform:uppercase}
+.room-card.active{border-color:#c8b89a;background:rgba(200,184,154,0.08)}
+
+.divider-small{width:min(320px,60vw);height:1px;background:#222}
+
+#drop-zone{width:min(420px,85vw);height:120px;border:1px solid #333;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;cursor:pointer;transition:border-color 0.2s,background 0.2s}
+#drop-zone:hover,#drop-zone.dragover{border-color:#c8b89a;background:rgba(200,184,154,0.05)}
+#drop-zone .icon{font-size:2rem;opacity:0.4}
+#drop-zone p{font-size:0.72rem;letter-spacing:0.12em;color:#666;text-transform:uppercase;text-align:center;line-height:1.6}
+#file-input{display:none}
+.upload-btn{padding:10px 28px;background:transparent;border:1px solid #444;color:#888;font-family:'Courier New',monospace;font-size:0.72rem;letter-spacing:0.2em;text-transform:uppercase;cursor:pointer;transition:border-color 0.2s,color 0.2s}
+.upload-btn:hover,.upload-btn:active{border-color:#c8b89a;color:#c8b89a}
+
+/* Overlay */
+#overlay{position:fixed;inset:0;background:rgba(10,10,10,0.88);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;z-index:50;backdrop-filter:blur(4px);transition:opacity 0.3s ease;overflow-y:auto;padding:20px 0}
+#overlay.hidden{opacity:0;pointer-events:none}
+#overlay h2{font-size:clamp(1rem,2.5vw,1.4rem);font-weight:400;letter-spacing:0.25em;text-transform:uppercase;color:#c8b89a}
+.controls-hint{display:grid;grid-template-columns:auto 1fr;gap:5px 14px;font-size:0.75rem;letter-spacing:0.08em;color:#888;line-height:1.7}
+.controls-hint .key{color:#c8b89a;text-align:right}
+.slider-row{display:flex;align-items:center;gap:10px}
+.slider-row label{font-size:0.72rem;letter-spacing:0.1em;color:#888;text-transform:uppercase;white-space:nowrap;width:100px;text-align:right}
+.slider-row input[type=range]{width:140px;accent-color:#c8b89a;cursor:pointer}
+.slider-row span{font-size:0.72rem;color:#c8b89a;width:38px;text-align:left}
+.divider{width:280px;height:1px;background:#222;margin:2px 0}
+.btn-row{display:flex;gap:12px;margin-top:4px}
+.start-btn{padding:10px 32px;background:transparent;border:1px solid #c8b89a;color:#c8b89a;font-family:'Courier New',monospace;font-size:0.75rem;letter-spacing:0.25em;text-transform:uppercase;cursor:pointer;transition:background 0.2s,color 0.2s}
+.start-btn:hover,.start-btn:active{background:#c8b89a;color:#0a0a0a}
+.new-file-btn{padding:10px 20px;background:transparent;border:1px solid #333;color:#555;font-family:'Courier New',monospace;font-size:0.75rem;letter-spacing:0.2em;text-transform:uppercase;cursor:pointer;transition:border-color 0.2s,color 0.2s}
+.new-file-btn:hover,.new-file-btn:active{border-color:#888;color:#888}
+
+/* Fadenkreuz (nur Desktop) */
+#crosshair{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:20px;height:20px;pointer-events:none;z-index:10;opacity:0;transition:opacity 0.3s ease}
+#crosshair.visible{opacity:0.6}
+#crosshair::before,#crosshair::after{content:'';position:absolute;background:#ffffff}
+#crosshair::before{width:1px;height:100%;left:50%;top:0}
+#crosshair::after{width:100%;height:1px;top:50%;left:0}
+
+#canvas{display:block;position:fixed;inset:0}
+
+#esc-hint{position:fixed;top:14px;right:16px;font-size:0.65rem;letter-spacing:0.15em;color:#555;text-transform:uppercase;pointer-events:none;z-index:10;opacity:0;transition:opacity 0.3s ease}
+#esc-hint.visible{opacity:1}
+
+/* Touch-Joystick Bewegung (links) */
+#joystick-move{position:fixed;left:20px;bottom:40px;width:110px;height:110px;z-index:20;display:none}
+#joy-move-base{position:absolute;inset:0;border-radius:50%;border:2px solid rgba(80,140,255,0.5);background:rgba(80,140,255,0.08)}
+#joy-move-knob{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:44px;height:44px;border-radius:50%;background:rgba(80,140,255,0.6);pointer-events:none}
+#joy-move-label{position:absolute;bottom:-22px;left:50%;transform:translateX(-50%);font-size:0.55rem;letter-spacing:0.1em;color:rgba(80,140,255,0.6);text-transform:uppercase;white-space:nowrap}
+
+/* Touch-Joystick Drehen (rechts) */
+#joystick-turn{position:fixed;right:20px;bottom:40px;width:110px;height:110px;z-index:20;display:none}
+#joy-turn-base{position:absolute;inset:0;border-radius:50%;border:2px solid rgba(80,140,255,0.5);background:rgba(80,140,255,0.08)}
+#joy-turn-knob{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:44px;height:44px;border-radius:50%;background:rgba(80,140,255,0.6);pointer-events:none}
+#joy-turn-label{position:absolute;bottom:-22px;left:50%;transform:translateX(-50%);font-size:0.55rem;letter-spacing:0.1em;color:rgba(80,140,255,0.6);text-transform:uppercase;white-space:nowrap}
+
+/* Pause-Button (Touch) */
+#pause-btn{position:fixed;top:14px;right:16px;z-index:30;display:none;padding:8px 16px;background:rgba(10,10,10,0.6);border:1px solid #444;color:#888;font-family:'Courier New',monospace;font-size:0.65rem;letter-spacing:0.15em;text-transform:uppercase;cursor:pointer;backdrop-filter:blur(4px)}
+
+#info{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);font-size:0.65rem;letter-spacing:0.15em;color:#444;text-transform:uppercase;pointer-events:none;z-index:10}
+</style>
+</head>
+<body>
+
+<div id="loader" class="hidden">
+  <h1>Raumbesichtigung</h1>
+  <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+  <span id="loader-status">Lade Modell ...</span>
+</div>
+
+<!-- ── NEU: Startseite mit Raumauswahl ──────────────────────────── -->
+<div id="upload-screen">
+  <h1>Raumbesichtigung</h1>
+  <p class="subtitle">Wähle einen Raum oder lade deine eigene Datei hoch</p>
+  
+  <div class="room-grid">
+    <div class="room-card" data-room="room_example_1.glb">
+      <span class="room-num">Raum 01</span>
+      <span class="room-name">Beispiel 1</span>
+    </div>
+    <div class="room-card" data-room="room_example_2.glb">
+      <span class="room-num">Raum 02</span>
+      <span class="room-name">Beispiel 2</span>
+    </div>
+    <div class="room-card" data-room="room_example_3.glb">
+      <span class="room-num">Raum 03</span>
+      <span class="room-name">Beispiel 3</span>
+    </div>
+  </div>
+  
+  <div class="divider-small"></div>
+  
+  <div id="drop-zone">
+    <div class="icon">&#8682;</div>
+    <p>Eigene GLB-Datei hier hineinziehen<br>oder antippen</p>
+  </div>
+  <button class="upload-btn" id="browse-btn">Datei auswählen</button>
+  <input type="file" id="file-input" accept=".glb,.GLB,model/gltf-binary,application/octet-stream,*/*" />
+</div>
+
+<div id="overlay" class="hidden">
+  <h2 id="overlay-title">Raumbesichtigung</h2>
+  <div class="controls-hint" id="desktop-hint">
+    <span class="key">W A S D</span><span>Bewegen</span>
+    <span class="key">Maus</span><span>Umsehen</span>
+    <span class="key">ESC</span><span>Pause</span>
+  </div>
+  <div class="controls-hint" id="touch-hint" style="display:none">
+    <span class="key">Links</span><span>Joystick bewegen</span>
+    <span class="key">Rechts</span><span>Wischen zum Umsehen</span>
+  </div>
+  <div class="divider"></div>
+  <div class="slider-row">
+    <label for="brightness-slider">&#9728; Helligkeit</label>
+    <input type="range" id="brightness-slider" min="0.5" max="8" step="0.1" value="3.0" />
+    <span id="brightness-value">3.0</span>
+  </div>
+  <div class="slider-row">
+    <label for="ibl-strength">&#10022; IBL St&auml;rke</label>
+    <input type="range" id="ibl-strength" min="0" max="3" step="0.1" value="0.2" />
+    <span id="ibl-strength-value">0.2</span>
+  </div>
+  <div class="slider-row">
+    <label for="height-slider">&#8597; Augenh&ouml;he</label>
+    <input type="range" id="height-slider" min="0.5" max="2.5" step="0.05" value="1.20" />
+    <span id="height-value">1.20 m</span>
+  </div>
+  <div class="slider-row">
+    <label for="bg-color">&#9632; Hintergrund</label>
+    <input type="color" id="bg-color" value="#ffffff" style="width:50px;height:28px;border:1px solid #444;background:none;cursor:pointer;padding:2px" />
+    <span style="font-size:0.7rem;color:#555;letter-spacing:0.05em">Farbe</span>
+  </div>
+  <div class="divider"></div>
+  <div class="btn-row">
+    <button class="start-btn" id="start-btn">Betreten</button>
+    <button class="new-file-btn" id="new-file-btn">Neue Datei</button>
+  </div>
+</div>
+
+<div id="crosshair"></div>
+<canvas id="canvas"></canvas>
+<div id="esc-hint">ESC - Pause</div>
+
+<!-- Touch-Joysticks -->
+<div id="joystick-move" style="display:none">
+  <div id="joy-move-base"><div id="joy-move-knob"></div></div>
+  <div id="joy-move-label">vor / zur&#252;ck</div>
+</div>
+<div id="joystick-turn" style="display:none">
+  <div id="joy-turn-base"><div id="joy-turn-knob"></div></div>
+  <div id="joy-turn-label">drehen</div>
+</div>
+<button id="pause-btn">&#9776; Pause</button>
+
+<div id="info"></div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.167.1/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.167.1/examples/jsm/"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader }          from 'three/addons/loaders/GLTFLoader.js';
+import { PointerLockControls } from 'three/addons/controls/PointerLockControls.js';
+
+// ── Geräteerkennung ──────────────────────────────────────────────
+const isTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+
+// DOM
+const canvas        = document.getElementById('canvas');
+const loaderEl      = document.getElementById('loader');
+const uploadScreen  = document.getElementById('upload-screen');
+const overlayEl     = document.getElementById('overlay');
+const overlayTitle  = document.getElementById('overlay-title');
+const crosshair     = document.getElementById('crosshair');
+const escHint       = document.getElementById('esc-hint');
+const progressBar   = document.getElementById('progress-fill');
+const statusText    = document.getElementById('loader-status');
+const startBtn      = document.getElementById('start-btn');
+const newFileBtn    = document.getElementById('new-file-btn');
+const browseBtn     = document.getElementById('browse-btn');
+const fileInput     = document.getElementById('file-input');
+const dropZone      = document.getElementById('drop-zone');
+const bSlider       = document.getElementById('brightness-slider');
+const bVal          = document.getElementById('brightness-value');
+const hSlider       = document.getElementById('height-slider');
+const hVal          = document.getElementById('height-value');
+const bgColor       = document.getElementById('bg-color');
+const iblStrength   = document.getElementById('ibl-strength');
+const iblStrVal     = document.getElementById('ibl-strength-value');
+const joystickMove  = document.getElementById('joystick-move');
+const joyMoveKnob   = document.getElementById('joy-move-knob');
+const joystickTurn  = document.getElementById('joystick-turn');
+const joyTurnKnob   = document.getElementById('joy-turn-knob');
+const pauseBtn      = document.getElementById('pause-btn');
+const infoEl        = document.getElementById('info');
+const desktopHint   = document.getElementById('desktop-hint');
+const touchHint     = document.getElementById('touch-hint');
+const roomCards     = document.querySelectorAll('.room-card');
+
+// Hinweise je nach Gerät
+if (isTouch) {
+  desktopHint.style.display = 'none';
+  touchHint.style.display   = 'grid';
+  infoEl.textContent = 'Links: Joystick  |  Rechts: Umsehen';
+} else {
+  infoEl.textContent = 'WASD bewegen  |  Maus umsehen  |  ESC pausieren';
+}
+
+// ── Renderer ─────────────────────────────────────────────────────
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.5;
+
+// ── Szene ────────────────────────────────────────────────────────
+const scene = new THREE.Scene();
+let currentBgColor = new THREE.Color(0xffffff);
+scene.background = currentBgColor;
+scene.fog = new THREE.Fog(currentBgColor, 8, 25);
+
+// ── Kamera ───────────────────────────────────────────────────────
+const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.05, 50);
+scene.add(camera);
+
+// ── Beleuchtung ──────────────────────────────────────────────────
+const ambientLight = new THREE.AmbientLight(0xffffff, 1.5);
+scene.add(ambientLight);
+const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
+dirLight.position.set(3, 6, 3);
+dirLight.castShadow = true;
+dirLight.shadow.mapSize.set(1024, 1024);
+dirLight.shadow.camera.near = 0.1; dirLight.shadow.camera.far = 20;
+dirLight.shadow.camera.left = dirLight.shadow.camera.bottom = -8;
+dirLight.shadow.camera.right = dirLight.shadow.camera.top = 8;
+scene.add(dirLight);
+
+// ── IBL ──────────────────────────────────────────────────────────
+const pmrem = new THREE.PMREMGenerator(renderer);
+pmrem.compileEquirectangularShader();
+function buildNeutralIBL() {
+  const w=64, h=32, data=new Float32Array(w*h*4);
+  for (let i=0;i<w*h;i++) {
+    const b = Math.floor(i/w)/h < 0.5 ? 1.2 : 0.6;
+    data[i*4]=data[i*4+1]=data[i*4+2]=b; data[i*4+3]=1;
+  }
+  const t=new THREE.DataTexture(data,w,h,THREE.RGBAFormat,THREE.FloatType);
+  t.mapping=THREE.EquirectangularReflectionMapping; t.needsUpdate=true;
+  const env=pmrem.fromEquirectangular(t).texture; t.dispose(); return env;
+}
+scene.environment = buildNeutralIBL();
+scene.environmentIntensity = 0.2;
+
+// ── PointerLockControls (Desktop) ────────────────────────────────
+const controls = new PointerLockControls(camera, document.body);
+scene.add(controls.getObject());
+
+let EYE_HEIGHT = 1.20;
+let lastFloorY = 0;
+let collisionMeshes = [];
+let currentModel = null;
+let animRunning = false;
+let touchActive = false;  // Touch-Modus aktiv
+
+// Startwerte anwenden
+renderer.toneMappingExposure = 1.5;
+ambientLight.intensity = 1.5;
+dirLight.intensity = 1.2;
+
+// ── Regler ───────────────────────────────────────────────────────
+bSlider.addEventListener('input', () => {
+  const v = parseFloat(bSlider.value);
+  bVal.textContent = v.toFixed(1);
+  renderer.toneMappingExposure = v * 0.5;
+  ambientLight.intensity = v * 0.5;
+  dirLight.intensity = v * 0.4;
+});
+iblStrength.addEventListener('input', () => {
+  const v = parseFloat(iblStrength.value);
+  iblStrVal.textContent = v.toFixed(1);
+  scene.environmentIntensity = v;
+});
+hSlider.addEventListener('input', () => {
+  const v = parseFloat(hSlider.value);
+  EYE_HEIGHT = v;
+  hVal.textContent = v.toFixed(2) + ' m';
+  controls.getObject().position.y = lastFloorY + EYE_HEIGHT;
+});
+bgColor.addEventListener('input', () => {
+  currentBgColor = new THREE.Color(bgColor.value);
+  scene.background = currentBgColor;
+  scene.fog = new THREE.Fog(currentBgColor, 8, 25);
+});
+
+// ── Desktop: PointerLock ─────────────────────────────────────────
+function enterDesktop() {
+  controls.lock();
+}
+function showOverlay() {
+  overlayEl.classList.remove('hidden');
+  crosshair.classList.remove('visible');
+  escHint.classList.remove('visible');
+  if (isTouch) {
+    joystickMove.style.display='none';
+    joystickTurn.style.display='none';
+    pauseBtn.style.display='none';
+    touchActive=false;
+  }
+}
+function hideOverlay() {
+  overlayEl.classList.add('hidden');
+  if (!isTouch) { crosshair.classList.add('visible'); escHint.classList.add('visible'); }
+  else {
+    joystickMove.style.display='block';
+    joystickTurn.style.display='block';
+    pauseBtn.style.display='block';
+    touchActive=true;
+  }
+}
+
+if (!isTouch) {
+  startBtn.addEventListener('click', enterDesktop);
+  controls.addEventListener('lock',   hideOverlay);
+  controls.addEventListener('unlock', showOverlay);
+} else {
+  startBtn.addEventListener('click', hideOverlay);
+  pauseBtn.addEventListener('click',  showOverlay);
+}
+
+newFileBtn.addEventListener('click', () => {
+  if (!isTouch) controls.unlock(); else showOverlay();
+  overlayEl.classList.add('hidden');
+  uploadScreen.classList.remove('hidden');
+  if (currentModel) { scene.remove(currentModel); currentModel=null; collisionMeshes=[]; }
+});
+
+// ── Tastatur (Desktop) ───────────────────────────────────────────
+const keys = {w:false,a:false,s:false,d:false};
+document.addEventListener('keydown', e => {
+  if (e.code==='KeyW'||e.code==='ArrowUp')    keys.w=true;
+  if (e.code==='KeyA'||e.code==='ArrowLeft')  keys.a=true;
+  if (e.code==='KeyS'||e.code==='ArrowDown')  keys.s=true;
+  if (e.code==='KeyD'||e.code==='ArrowRight') keys.d=true;
+});
+document.addEventListener('keyup', e => {
+  if (e.code==='KeyW'||e.code==='ArrowUp')    keys.w=false;
+  if (e.code==='KeyA'||e.code==='ArrowLeft')  keys.a=false;
+  if (e.code==='KeyS'||e.code==='ArrowDown')  keys.s=false;
+  if (e.code==='KeyD'||e.code==='ArrowRight') keys.d=false;
+});
+
+// ── Touch-Steuerung ──────────────────────────────────────────────
+const JOY_RADIUS = 38;
+const move = { id:null, x:0, y:0 };
+const turn = { id:null, x:0 };
+
+function joystickHandler(el, knob, store, onlyY) {
+  const getCenter = () => { const r=el.getBoundingClientRect(); return {x:r.left+r.width/2, y:r.top+r.height/2}; };
+
+  el.addEventListener('touchstart', e => {
+    e.preventDefault();
+    if (store.id !== null) return;
+    const t = e.changedTouches[0];
+    store.id = t.identifier;
+    store.x  = 0; store.y = 0;
+  }, {passive:false});
+
+  el.addEventListener('touchmove', e => {
+    e.preventDefault();
+    for (const t of e.changedTouches) {
+      if (t.identifier !== store.id) continue;
+      const c  = getCenter();
+      let dx   = t.clientX - c.x;
+      let dy   = t.clientY - c.y;
+      const len = Math.sqrt(dx*dx + dy*dy);
+      if (len > JOY_RADIUS) { dx=dx/len*JOY_RADIUS; dy=dy/len*JOY_RADIUS; }
+      // Linker Joystick: nur Y (vor/zurück), X ignorieren
+      store.x = onlyY ? 0 : dx / JOY_RADIUS;
+      store.y = dy / JOY_RADIUS;
+      knob.style.transform = onlyY
+        ? `translate(-50%, calc(-50% + ${dy}px))`
+        : `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
+    }
+  }, {passive:false});
+
+  const end = e => {
+    for (const t of e.changedTouches) {
+      if (t.identifier !== store.id) continue;
+      store.id=null; store.x=0; store.y=0;
+      knob.style.transform='translate(-50%,-50%)';
+    }
+  };
+  el.addEventListener('touchend',    end);
+  el.addEventListener('touchcancel', end);
+}
+
+joystickHandler(joystickMove, joyMoveKnob, move, true);   // nur vor/zurück
+joystickHandler(joystickTurn, joyTurnKnob, turn, false);  // nur drehen (X)
+
+// ── NEU: Raumauswahl ─────────────────────────────────────────────
+roomCards.forEach(card => {
+  card.addEventListener('click', () => {
+    roomCards.forEach(c => c.classList.remove('active'));
+    card.classList.add('active');
+    const filename = card.dataset.room;
+    loadGLBFromURL(filename);
+  });
+});
+
+// ── Drag & Drop (Desktop) ────────────────────────────────────────
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault(); dropZone.classList.remove('dragover');
+  const f=e.dataTransfer.files[0]; if(f) loadGLBFromFile(f);
+});
+dropZone.addEventListener('click', () => fileInput.click());
+browseBtn.addEventListener('click', () => fileInput.click());
+fileInput.addEventListener('change', e => {
+  const f=e.target.files[0]; if(f) loadGLBFromFile(f); fileInput.value='';
+});
+
+// ── GLB per URL laden ────────────────────────────────────────────
+function loadGLBFromURL(url) {
+  uploadScreen.classList.add('hidden');
+  loaderEl.classList.remove('hidden');
+  progressBar.style.width='0%';
+  statusText.textContent='Lade '+url+' ...';
+  new GLTFLoader().load(url,
+    gltf => { progressBar.style.width='100%'; statusText.textContent='Bereit'; setupModel(gltf,url); },
+    xhr  => { if(xhr.total>0){ const p=(xhr.loaded/xhr.total)*100; progressBar.style.width=p.toFixed(0)+'%'; statusText.textContent='Lade ... '+p.toFixed(0)+' %'; } },
+    ()   => { loaderEl.classList.add('hidden'); uploadScreen.classList.remove('hidden'); }
+  );
+}
+
+// ── GLB aus File laden ───────────────────────────────────────────
+function loadGLBFromFile(file) {
+  uploadScreen.classList.add('hidden');
+  loaderEl.classList.remove('hidden');
+  progressBar.style.width='0%';
+  statusText.textContent='Lese Datei ...';
+  const reader=new FileReader();
+  reader.onprogress=e=>{ if(e.lengthComputable){ const p=(e.loaded/e.total)*50; progressBar.style.width=p.toFixed(0)+'%'; } };
+  reader.onload=e=>{
+    statusText.textContent='Verarbeite ...'; progressBar.style.width='60%';
+    new GLTFLoader().parse(e.target.result,'',
+      gltf => { progressBar.style.width='100%'; setupModel(gltf,file.name); },
+      err  => { console.error(err); loaderEl.classList.add('hidden'); uploadScreen.classList.remove('hidden'); }
+    );
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+// ── Modell einrichten ────────────────────────────────────────────
+function setupModel(gltf, filename) {
+  if (currentModel) scene.remove(currentModel);
+  collisionMeshes=[];
+  const model=currentModel=gltf.scene;
+  model.traverse(c=>{ if(c.isMesh){ c.castShadow=c.receiveShadow=true; collisionMeshes.push(c); } });
+  scene.add(model);
+
+  const box=new THREE.Box3().setFromObject(model);
+  const center=box.getCenter(new THREE.Vector3());
+  const startRay=new THREE.Raycaster(new THREE.Vector3(center.x,box.max.y+1,center.z),new THREE.Vector3(0,-1,0),0,(box.max.y-box.min.y)+2);
+  const hits=startRay.intersectObjects(collisionMeshes,true);
+  lastFloorY=hits.length>0 ? Math.max(...hits.map(h=>h.point.y)) : box.min.y;
+  controls.getObject().position.set(center.x, lastFloorY+EYE_HEIGHT, center.z);
+
+  overlayTitle.textContent=filename.replace(/\.glb$/i,'');
+  loaderEl.classList.add('hidden');
+  overlayEl.classList.remove('hidden');
+  if (!animRunning){ animRunning=true; animate(); }
+}
+
+// ── Kollision ────────────────────────────────────────────────────
+const wallRay=new THREE.Raycaster(), floorRay=new THREE.Raycaster();
+const DOWN=new THREE.Vector3(0,-1,0);
+const WALL_MARGIN=0.35, MOVE_SPEED=3.5, FLOOR_SEARCH=5.0;
+
+function isBlocked(origin,dir){ wallRay.set(origin,dir); wallRay.far=WALL_MARGIN; return wallRay.intersectObjects(collisionMeshes,true).length>0; }
+
+function groundHeight(pos){
+  floorRay.set(new THREE.Vector3(pos.x,pos.y-0.05,pos.z),DOWN); floorRay.far=FLOOR_SEARCH;
+  const hits=floorRay.intersectObjects(collisionMeshes,true);
+  if(hits.length>0){
+    lastFloorY=(pos.y-0.05)-hits[0].distance;
+    const targetY = lastFloorY + EYE_HEIGHT;
+    const diff = targetY - pos.y;
+    // Schwellwert: unter 2mm nicht anpassen — verhindert Zittern auf ebenem Boden
+    if (Math.abs(diff) < 0.002) return pos.y;
+    if (Math.abs(diff) > 1.0) return pos.y + diff * 0.5;
+    return pos.y + diff * 0.15;
+  }
+  return pos.y;
+}
+
+// ── Bewegungs-Update ─────────────────────────────────────────────
+const tmpVec=new THREE.Vector3(), moveDir=new THREE.Vector3();
+
+function updateMovement(delta){
+  const pivot=controls.getObject();
+  const speed=MOVE_SPEED*delta;
+  camera.getWorldDirection(tmpVec); tmpVec.y=0; tmpVec.normalize();
+  const right=new THREE.Vector3().crossVectors(tmpVec,camera.up).normalize();
+  moveDir.set(0,0,0);
+
+  if (!isTouch) {
+    // Desktop: WASD
+    if(!controls.isLocked) return;
+    if(keys.w) moveDir.addScaledVector(tmpVec, 1);
+    if(keys.s) moveDir.addScaledVector(tmpVec,-1);
+    if(keys.a) moveDir.addScaledVector(right, -1);
+    if(keys.d) moveDir.addScaledVector(right,  1);
+  } else {
+    // Touch: linker Joystick nur vor/zurück, rechter Joystick nur drehen
+    if (!touchActive) return;
+    if (Math.abs(move.y) > 0.1) moveDir.addScaledVector(tmpVec, -move.y);
+    // Drehen: rechter Joystick X dreht die Kamera horizontal
+    // ── GEÄNDERT: 0.018 → 0.015 ──────────────────────────────
+    if (Math.abs(turn.x) > 0.1) {
+      controls.getObject().rotation.y -= turn.x * 0.015;
+    }
+  }
+
+  const isMoving = moveDir.lengthSq() > 0;
+
+  if (isMoving) {
+    moveDir.normalize();
+    const px=pivot.position.clone().addScaledVector(new THREE.Vector3(moveDir.x,0,0),WALL_MARGIN+0.01);
+    if(!isBlocked(px,new THREE.Vector3(moveDir.x,0,0).normalize())) pivot.position.x+=moveDir.x*speed;
+    const pz=pivot.position.clone().addScaledVector(new THREE.Vector3(0,0,moveDir.z),WALL_MARGIN+0.01);
+    if(!isBlocked(pz,new THREE.Vector3(0,0,moveDir.z).normalize())) pivot.position.z+=moveDir.z*speed;
+    // Boden nur beim Bewegen prüfen — verhindert Zittern beim Umschauen
+    if(collisionMeshes.length>0) pivot.position.y=groundHeight(pivot.position);
+  }
+}
+
+// ── Render-Loop ──────────────────────────────────────────────────
+const clock=new THREE.Clock();
+function animate(){ requestAnimationFrame(animate); updateMovement(clock.getDelta()); renderer.render(scene,camera); }
+
+// ── Resize ───────────────────────────────────────────────────────
+window.addEventListener('resize',()=>{ camera.aspect=window.innerWidth/window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth,window.innerHeight); });
+
+// ── Kein Auto-Load mehr — Nutzer wählt selbst ────────────────────
+// loadGLBFromURL('room_example_1.glb');
+</script>
+</body>
+</html>
