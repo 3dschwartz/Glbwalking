@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
-<title>3D Raumbesichtigung</title>
+<title>3D GLB Walking</title>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 body{background:#ffffff;font-family:'Courier New',monospace;color:#e0e0e0;overflow:hidden;height:100dvh;touch-action:none}
@@ -84,32 +84,36 @@ body{background:#ffffff;font-family:'Courier New',monospace;color:#e0e0e0;overfl
 
 #info{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);font-size:0.65rem;letter-spacing:0.15em;color:#444;text-transform:uppercase;pointer-events:none;z-index:10}
 </style>
+<base target="_blank">
 </head>
 <body>
 
 <div id="loader" class="hidden">
-  <h1>Raumbesichtigung</h1>
+  <h1>GLB Walking</h1>
   <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
   <span id="loader-status">Lade Modell ...</span>
 </div>
 
 <!-- ── NEU: Startseite mit Raumauswahl ──────────────────────────── -->
 <div id="upload-screen">
-  <h1>Raumbesichtigung</h1>
+  <h1>GLB Walking</h1>
   <p class="subtitle">Wähle einen Raum oder lade deine eigene Datei hoch</p>
   
   <div class="room-grid">
     <div class="room-card" data-room="room_example_1.glb">
-      <span class="room-num">Raum 01</span>
       <span class="room-name">Beispiel 1</span>
     </div>
     <div class="room-card" data-room="room_example_2.glb">
-      <span class="room-num">Raum 02</span>
       <span class="room-name">Beispiel 2</span>
     </div>
     <div class="room-card" data-room="room_example_3.glb">
-      <span class="room-num">Raum 03</span>
       <span class="room-name">Beispiel 3</span>
+    </div>
+    <div class="room-card" data-room="room_example_4.glb">
+      <span class="room-name">Beispiel 4</span>
+    </div>
+    <div class="room-card" data-room="room_example_5.glb">
+      <span class="room-name">Beispiel 5</span>
     </div>
   </div>
   
@@ -124,7 +128,7 @@ body{background:#ffffff;font-family:'Courier New',monospace;color:#e0e0e0;overfl
 </div>
 
 <div id="overlay" class="hidden">
-  <h2 id="overlay-title">Raumbesichtigung</h2>
+  <h2 id="overlay-title">GLB Walking</h2>
   <div class="controls-hint" id="desktop-hint">
     <span class="key">W A S D</span><span>Bewegen</span>
     <span class="key">Maus</span><span>Umsehen</span>
