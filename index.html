@@ -15,7 +15,7 @@ body{background:#ffffff;font-family:'Courier New',monospace;color:#e0e0e0;overfl
 .progress-fill{height:100%;background:#c8b89a;width:0%;transition:width 0.3s ease}
 #loader-status{font-size:0.75rem;letter-spacing:0.15em;color:#666}
 
-/* ── NEU: Startseite mit Raumauswahl ──────────────────────────── */
+/* ── Startseite mit Raumauswahl ──────────────────────────── */
 #upload-screen{position:fixed;inset:0;background:#0a0a0a;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:28px;z-index:90;overflow-y:auto;padding:40px 20px}
 #upload-screen.hidden{display:none}
 #upload-screen h1{font-size:clamp(1.2rem,3vw,1.8rem);font-weight:400;letter-spacing:0.3em;text-transform:uppercase;color:#c8b89a}
@@ -94,27 +94,13 @@ body{background:#ffffff;font-family:'Courier New',monospace;color:#e0e0e0;overfl
   <span id="loader-status">Lade Modell ...</span>
 </div>
 
-<!-- ── NEU: Startseite mit Raumauswahl ──────────────────────────── -->
+<!-- ── Startseite mit Raumauswahl ──────────────────────────── -->
 <div id="upload-screen">
   <h1>GLB Walking</h1>
   <p class="subtitle">Wähle einen Raum oder lade deine eigene Datei hoch</p>
   
-  <div class="room-grid">
-    <div class="room-card" data-room="room_example_1.glb">
-      <span class="room-name">Beispiel 1</span>
-    </div>
-    <div class="room-card" data-room="room_example_2.glb">
-      <span class="room-name">Beispiel 2</span>
-    </div>
-    <div class="room-card" data-room="room_example_3.glb">
-      <span class="room-name">Beispiel 3</span>
-    </div>
-    <div class="room-card" data-room="room_example_4.glb">
-      <span class="room-name">Beispiel 4</span>
-    </div>
-    <div class="room-card" data-room="room_example_5.glb">
-      <span class="room-name">Beispiel 5</span>
-    </div>
+  <div class="room-grid" id="room-grid">
+    <!-- Räume werden dynamisch aus ROOMS generiert -->
   </div>
   
   <div class="divider-small"></div>
@@ -195,7 +181,70 @@ body{background:#ffffff;font-family:'Courier New',monospace;color:#e0e0e0;overfl
 <script type="module">
 import * as THREE from 'three';
 import { GLTFLoader }          from 'three/addons/loaders/GLTFLoader.js';
+import { DRACOLoader }         from 'three/addons/loaders/DRACOLoader.js';
 import { PointerLockControls } from 'three/addons/controls/PointerLockControls.js';
+
+// ═══════════════════════════════════════════════════════════════════
+// ═══ KONFIGURATION: Beispielräume mit individuellen Voreinstellungen
+// ═══════════════════════════════════════════════════════════════════
+// Hier kannst du ganz einfach Namen, Dateien und Werte anpassen.
+// brightness  = Helligkeit (0.5 – 8)
+// ibl         = IBL-Stärke (0 – 3)
+// eyeHeight   = Augenhöhe in Metern (0.5 – 2.5)
+// bgColor     = Hintergrundfarbe als Hex-String
+// ═══════════════════════════════════════════════════════════════════
+const ROOMS = [
+  {
+    name: 'Beispiel 1',
+    file: 'room_example_1.glb',
+    brightness: 3.0,
+    ibl: 0.2,
+    eyeHeight: 1.20,
+    bgColor: '#ffffff'
+  },
+  {
+    name: 'Beispiel 2',
+    file: 'room_example_2.glb',
+    brightness: 2.5,
+    ibl: 0.5,
+    eyeHeight: 1.20,
+    bgColor: '#e8e4dc'
+  },
+  {
+    name: 'Beispiel 3',
+    file: 'room_example_3.glb',
+    brightness: 4.0,
+    ibl: 0.1,
+    eyeHeight: 1.20,
+    bgColor: '#1a1a2e'
+  },
+  {
+    name: 'Beispiel 4',
+    file: 'room_example_4.glb',
+    brightness: 1.8,
+    ibl: 1.0,
+    eyeHeight: 1.20,
+    bgColor: '#2d2d2d'
+  },
+  {
+    name: 'Beispiel 5',
+    file: 'room_example_5.glb',
+    brightness: 3.5,
+    ibl: 0.3,
+    eyeHeight: 1.20,
+    bgColor: '#f5f0e8'
+  },
+  {
+    name: 'Beispiel 6',
+    file: 'room_example_6.glb',
+    brightness: 2.0,
+    ibl: 0.8,
+    eyeHeight: 1.20,
+    bgColor: '#0f172a'
+  }
+];
+
+// ═══════════════════════════════════════════════════════════════════
 
 // ── Geräteerkennung ──────────────────────────────────────────────
 const isTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
@@ -230,7 +279,7 @@ const pauseBtn      = document.getElementById('pause-btn');
 const infoEl        = document.getElementById('info');
 const desktopHint   = document.getElementById('desktop-hint');
 const touchHint     = document.getElementById('touch-hint');
-const roomCards     = document.querySelectorAll('.room-card');
+const roomGrid      = document.getElementById('room-grid');
 
 // Hinweise je nach Gerät
 if (isTouch) {
@@ -288,6 +337,13 @@ function buildNeutralIBL() {
 scene.environment = buildNeutralIBL();
 scene.environmentIntensity = 0.2;
 
+// ── Draco-Loader einrichten ──────────────────────────────────────
+const dracoLoader = new DRACOLoader();
+dracoLoader.setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.167.1/examples/jsm/libs/draco/');
+
+const gltfLoader = new GLTFLoader();
+gltfLoader.setDRACOLoader(dracoLoader);
+
 // ── PointerLockControls (Desktop) ────────────────────────────────
 const controls = new PointerLockControls(camera, document.body);
 scene.add(controls.getObject());
@@ -298,6 +354,7 @@ let collisionMeshes = [];
 let currentModel = null;
 let animRunning = false;
 let touchActive = false;  // Touch-Modus aktiv
+let currentRoomConfig = null; // Aktuelle Raum-Konfiguration
 
 // Startwerte anwenden
 renderer.toneMappingExposure = 1.5;
@@ -434,15 +491,51 @@ function joystickHandler(el, knob, store, onlyY) {
 joystickHandler(joystickMove, joyMoveKnob, move, true);   // nur vor/zurück
 joystickHandler(joystickTurn, joyTurnKnob, turn, false);  // nur drehen (X)
 
-// ── NEU: Raumauswahl ─────────────────────────────────────────────
-roomCards.forEach(card => {
-  card.addEventListener('click', () => {
-    roomCards.forEach(c => c.classList.remove('active'));
-    card.classList.add('active');
-    const filename = card.dataset.room;
-    loadGLBFromURL(filename);
+// ── Räume dynamisch generieren ───────────────────────────────────
+function buildRoomCards() {
+  roomGrid.innerHTML = '';
+  ROOMS.forEach((room, index) => {
+    const card = document.createElement('div');
+    card.className = 'room-card';
+    card.dataset.index = index;
+    card.innerHTML = `<span class="room-name">${room.name}</span>`;
+    card.addEventListener('click', () => {
+      document.querySelectorAll('.room-card').forEach(c => c.classList.remove('active'));
+      card.classList.add('active');
+      loadRoomByIndex(index);
+    });
+    roomGrid.appendChild(card);
   });
-});
+}
+buildRoomCards();
+
+// ── Raum laden mit Voreinstellungen ──────────────────────────────
+function loadRoomByIndex(index) {
+  const config = ROOMS[index];
+  currentRoomConfig = config;
+  
+  // Voreinstellungen anwenden
+  EYE_HEIGHT = config.eyeHeight;
+  hSlider.value = config.eyeHeight;
+  hVal.textContent = config.eyeHeight.toFixed(2) + ' m';
+  
+  bSlider.value = config.brightness;
+  bVal.textContent = config.brightness.toFixed(1);
+  renderer.toneMappingExposure = config.brightness * 0.5;
+  ambientLight.intensity = config.brightness * 0.5;
+  dirLight.intensity = config.brightness * 0.4;
+  
+  iblStrength.value = config.ibl;
+  iblStrVal.textContent = config.ibl.toFixed(1);
+  scene.environmentIntensity = config.ibl;
+  
+  bgColor.value = config.bgColor;
+  currentBgColor = new THREE.Color(config.bgColor);
+  scene.background = currentBgColor;
+  scene.fog = new THREE.Fog(currentBgColor, 8, 25);
+  
+  loadGLBFromURL(config.file);
+}
 
 // ── Drag & Drop (Desktop) ────────────────────────────────────────
 dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
@@ -463,7 +556,7 @@ function loadGLBFromURL(url) {
   loaderEl.classList.remove('hidden');
   progressBar.style.width='0%';
   statusText.textContent='Lade '+url+' ...';
-  new GLTFLoader().load(url,
+  gltfLoader.load(url,
     gltf => { progressBar.style.width='100%'; statusText.textContent='Bereit'; setupModel(gltf,url); },
     xhr  => { if(xhr.total>0){ const p=(xhr.loaded/xhr.total)*100; progressBar.style.width=p.toFixed(0)+'%'; statusText.textContent='Lade ... '+p.toFixed(0)+' %'; } },
     ()   => { loaderEl.classList.add('hidden'); uploadScreen.classList.remove('hidden'); }
@@ -480,7 +573,7 @@ function loadGLBFromFile(file) {
   reader.onprogress=e=>{ if(e.lengthComputable){ const p=(e.loaded/e.total)*50; progressBar.style.width=p.toFixed(0)+'%'; } };
   reader.onload=e=>{
     statusText.textContent='Verarbeite ...'; progressBar.style.width='60%';
-    new GLTFLoader().parse(e.target.result,'',
+    gltfLoader.parse(e.target.result,'',
       gltf => { progressBar.style.width='100%'; setupModel(gltf,file.name); },
       err  => { console.error(err); loaderEl.classList.add('hidden'); uploadScreen.classList.remove('hidden'); }
     );
@@ -498,10 +591,26 @@ function setupModel(gltf, filename) {
 
   const box=new THREE.Box3().setFromObject(model);
   const center=box.getCenter(new THREE.Vector3());
-  const startRay=new THREE.Raycaster(new THREE.Vector3(center.x,box.max.y+1,center.z),new THREE.Vector3(0,-1,0),0,(box.max.y-box.min.y)+2);
+  
+  // ── KORREKTUR: Boden als NIEDRIGSTEN Trefferpunkt ermitteln ──
+  // Ray von oben nach unten schießen, um den Boden zu finden
+  const startRay=new THREE.Raycaster(
+    new THREE.Vector3(center.x, box.max.y + 1, center.z),
+    new THREE.Vector3(0, -1, 0),
+    0,
+    (box.max.y - box.min.y) + 2
+  );
   const hits=startRay.intersectObjects(collisionMeshes,true);
-  lastFloorY=hits.length>0 ? Math.max(...hits.map(h=>h.point.y)) : box.min.y;
-  controls.getObject().position.set(center.x, lastFloorY+EYE_HEIGHT, center.z);
+  
+  // Niedrigsten Trefferpunkt als Boden verwenden (nicht höchsten!)
+  if (hits.length > 0) {
+    lastFloorY = Math.min(...hits.map(h => h.point.y));
+  } else {
+    lastFloorY = box.min.y;
+  }
+  
+  // Kamera auf Bodenhöhe + Augenhöhe setzen
+  controls.getObject().position.set(center.x, lastFloorY + EYE_HEIGHT, center.z);
 
   overlayTitle.textContent=filename.replace(/\.glb$/i,'');
   loaderEl.classList.add('hidden');
@@ -553,7 +662,6 @@ function updateMovement(delta){
     if (!touchActive) return;
     if (Math.abs(move.y) > 0.1) moveDir.addScaledVector(tmpVec, -move.y);
     // Drehen: rechter Joystick X dreht die Kamera horizontal
-    // ── GEÄNDERT: 0.018 → 0.015 ──────────────────────────────
     if (Math.abs(turn.x) > 0.1) {
       controls.getObject().rotation.y -= turn.x * 0.015;
     }
@@ -580,7 +688,6 @@ function animate(){ requestAnimationFrame(animate); updateMovement(clock.getDelt
 window.addEventListener('resize',()=>{ camera.aspect=window.innerWidth/window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth,window.innerHeight); });
 
 // ── Kein Auto-Load mehr — Nutzer wählt selbst ────────────────────
-// loadGLBFromURL('room_example_1.glb');
 </script>
 </body>
 </html>
