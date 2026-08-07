@@ -83,6 +83,31 @@ body{background:#ffffff;font-family:'Courier New',monospace;color:#e0e0e0;overfl
 #pause-btn{position:fixed;top:14px;right:16px;z-index:30;display:none;padding:8px 16px;background:rgba(10,10,10,0.6);border:1px solid #444;color:#888;font-family:'Courier New',monospace;font-size:0.65rem;letter-spacing:0.15em;text-transform:uppercase;cursor:pointer;backdrop-filter:blur(4px)}
 
 #info{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);font-size:0.65rem;letter-spacing:0.15em;color:#444;text-transform:uppercase;pointer-events:none;z-index:10}
+
+/* VR-Button Styling */
+#VRButton {
+  position: fixed !important;
+  bottom: 20px !important;
+  left: 50% !important;
+  right: auto !important;
+  top: auto !important;
+  transform: translateX(-50%) !important;
+  z-index: 100 !important;
+  background: rgba(10,10,10,0.9) !important;
+  border: 1px solid #c8b89a !important;
+  color: #c8b89a !important;
+  font-family: 'Courier New', monospace !important;
+  font-size: 0.72rem !important;
+  letter-spacing: 0.2em !important;
+  text-transform: uppercase !important;
+  padding: 10px 28px !important;
+  cursor: pointer !important;
+  opacity: 1 !important;
+  backdrop-filter: blur(4px);
+}
+#VRButton:hover {
+  background: rgba(200,184,154,0.15) !important;
+}
 </style>
 <base target="_blank">
 </head>
@@ -183,15 +208,10 @@ import * as THREE from 'three';
 import { GLTFLoader }          from 'three/addons/loaders/GLTFLoader.js';
 import { DRACOLoader }         from 'three/addons/loaders/DRACOLoader.js';
 import { PointerLockControls } from 'three/addons/controls/PointerLockControls.js';
+import { VRButton }            from 'three/addons/webxr/VRButton.js';
 
 // ═══════════════════════════════════════════════════════════════════
 // ═══ KONFIGURATION: Beispielräume mit individuellen Voreinstellungen
-// ═══════════════════════════════════════════════════════════════════
-// Hier kannst du ganz einfach Namen, Dateien und Werte anpassen.
-// brightness  = Helligkeit (0.5 – 8)
-// ibl         = IBL-Stärke (0 – 3)
-// eyeHeight   = Augenhöhe in Metern (0.5 – 2.5)
-// bgColor     = Hintergrundfarbe als Hex-String
 // ═══════════════════════════════════════════════════════════════════
 const ROOMS = [
   {
@@ -243,7 +263,6 @@ const ROOMS = [
     bgColor: '#fefefe'
   }
 ];
-
 // ═══════════════════════════════════════════════════════════════════
 
 // ── Geräteerkennung ──────────────────────────────────────────────
@@ -298,15 +317,20 @@ renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.5;
+renderer.xr.enabled = true; // WebXR aktivieren
+
+// ── VR-Button ──────────────────────────────────────────────────────
+const vrBtn = VRButton.createButton(renderer);
+document.body.appendChild(vrBtn);
 
 // ── Szene ────────────────────────────────────────────────────────
 const scene = new THREE.Scene();
 let currentBgColor = new THREE.Color(0xffffff);
 scene.background = currentBgColor;
-scene.fog = new THREE.Fog(currentBgColor, 450, 500);
+scene.fog = new THREE.Fog(currentBgColor, 8, 25);
 
 // ── Kamera ───────────────────────────────────────────────────────
-const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.05, 500);
+const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.05, 50);
 scene.add(camera);
 
 // ── Beleuchtung ──────────────────────────────────────────────────
@@ -353,13 +377,53 @@ let lastFloorY = 0;
 let collisionMeshes = [];
 let currentModel = null;
 let animRunning = false;
-let touchActive = false;  // Touch-Modus aktiv
-let currentRoomConfig = null; // Aktuelle Raum-Konfiguration
+let touchActive = false;
 
 // Startwerte anwenden
 renderer.toneMappingExposure = 1.5;
 ambientLight.intensity = 1.5;
 dirLight.intensity = 1.2;
+
+// ═══════════════════════════════════════════════════════════════════
+// ═══ VR-TELEPORTATION SETUP ══════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════
+
+// Rechter Controller für Teleportation (Index 0)
+const controller = renderer.xr.getController(0);
+scene.add(controller);
+
+// Sichtbarer Ray aus dem Controller
+const rayGeo = new THREE.BufferGeometry().setFromPoints([
+  new THREE.Vector3(0, 0, 0),
+  new THREE.Vector3(0, 0, -1)
+]);
+const rayMat = new THREE.LineBasicMaterial({ color: 0xc8b89a });
+const teleportRay = new THREE.Line(rayGeo, rayMat);
+teleportRay.scale.z = 30; // Länge des Rays
+controller.add(teleportRay);
+
+// Teleport-Ziel-Marker (Ring auf dem Boden)
+const ringGeo = new THREE.RingGeometry(0.15, 0.2, 32);
+ringGeo.rotateX(-Math.PI / 2);
+const ringMat = new THREE.MeshBasicMaterial({ color: 0xc8b89a, transparent: true, opacity: 0.8, side: THREE.DoubleSide });
+const teleportMarker = new THREE.Mesh(ringGeo, ringMat);
+teleportMarker.visible = false;
+scene.add(teleportMarker);
+
+let teleportTarget = null;
+const tempMatrix = new THREE.Matrix4();
+const raycasterVR = new THREE.Raycaster();
+
+// Trigger-Klick = Teleportieren
+controller.addEventListener('select', () => {
+  if (teleportTarget) {
+    const pivot = controls.getObject();
+    pivot.position.set(teleportTarget.x, teleportTarget.y + EYE_HEIGHT, teleportTarget.z);
+    teleportMarker.visible = false;
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════════
 
 // ── Regler ───────────────────────────────────────────────────────
 bSlider.addEventListener('input', () => {
@@ -468,7 +532,6 @@ function joystickHandler(el, knob, store, onlyY) {
       let dy   = t.clientY - c.y;
       const len = Math.sqrt(dx*dx + dy*dy);
       if (len > JOY_RADIUS) { dx=dx/len*JOY_RADIUS; dy=dy/len*JOY_RADIUS; }
-      // Linker Joystick: nur Y (vor/zurück), X ignorieren
       store.x = onlyY ? 0 : dx / JOY_RADIUS;
       store.y = dy / JOY_RADIUS;
       knob.style.transform = onlyY
@@ -488,8 +551,8 @@ function joystickHandler(el, knob, store, onlyY) {
   el.addEventListener('touchcancel', end);
 }
 
-joystickHandler(joystickMove, joyMoveKnob, move, true);   // nur vor/zurück
-joystickHandler(joystickTurn, joyTurnKnob, turn, false);  // nur drehen (X)
+joystickHandler(joystickMove, joyMoveKnob, move, true);
+joystickHandler(joystickTurn, joyTurnKnob, turn, false);
 
 // ── Räume dynamisch generieren ───────────────────────────────────
 function buildRoomCards() {
@@ -512,9 +575,7 @@ buildRoomCards();
 // ── Raum laden mit Voreinstellungen ──────────────────────────────
 function loadRoomByIndex(index) {
   const config = ROOMS[index];
-  currentRoomConfig = config;
   
-  // Voreinstellungen anwenden
   EYE_HEIGHT = config.eyeHeight;
   hSlider.value = config.eyeHeight;
   hVal.textContent = config.eyeHeight.toFixed(2) + ' m';
@@ -537,7 +598,7 @@ function loadRoomByIndex(index) {
   loadGLBFromURL(config.file);
 }
 
-// ── Drag & Drop (Desktop) ────────────────────────────────────────
+// ── Drag & Drop ───────────────────────────────────────────────────
 dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
 dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
 dropZone.addEventListener('drop', e => {
@@ -592,8 +653,6 @@ function setupModel(gltf, filename) {
   const box=new THREE.Box3().setFromObject(model);
   const center=box.getCenter(new THREE.Vector3());
   
-  // ── KORREKTUR: Boden als NIEDRIGSTEN Trefferpunkt ermitteln ──
-  // Ray von oben nach unten schießen, um den Boden zu finden
   const startRay=new THREE.Raycaster(
     new THREE.Vector3(center.x, box.max.y + 1, center.z),
     new THREE.Vector3(0, -1, 0),
@@ -602,14 +661,12 @@ function setupModel(gltf, filename) {
   );
   const hits=startRay.intersectObjects(collisionMeshes,true);
   
-  // Niedrigsten Trefferpunkt als Boden verwenden (nicht höchsten!)
   if (hits.length > 0) {
     lastFloorY = Math.min(...hits.map(h => h.point.y));
   } else {
     lastFloorY = box.min.y;
   }
   
-  // Kamera auf Bodenhöhe + Augenhöhe setzen
   controls.getObject().position.set(center.x, lastFloorY + EYE_HEIGHT, center.z);
 
   overlayTitle.textContent=filename.replace(/\.glb$/i,'');
@@ -632,7 +689,6 @@ function groundHeight(pos){
     lastFloorY=(pos.y-0.05)-hits[0].distance;
     const targetY = lastFloorY + EYE_HEIGHT;
     const diff = targetY - pos.y;
-    // Schwellwert: unter 2mm nicht anpassen — verhindert Zittern auf ebenem Boden
     if (Math.abs(diff) < 0.002) return pos.y;
     if (Math.abs(diff) > 1.0) return pos.y + diff * 0.5;
     return pos.y + diff * 0.15;
@@ -651,17 +707,14 @@ function updateMovement(delta){
   moveDir.set(0,0,0);
 
   if (!isTouch) {
-    // Desktop: WASD
     if(!controls.isLocked) return;
     if(keys.w) moveDir.addScaledVector(tmpVec, 1);
     if(keys.s) moveDir.addScaledVector(tmpVec,-1);
     if(keys.a) moveDir.addScaledVector(right, -1);
     if(keys.d) moveDir.addScaledVector(right,  1);
   } else {
-    // Touch: linker Joystick nur vor/zurück, rechter Joystick nur drehen
     if (!touchActive) return;
     if (Math.abs(move.y) > 0.1) moveDir.addScaledVector(tmpVec, -move.y);
-    // Drehen: rechter Joystick X dreht die Kamera horizontal
     if (Math.abs(turn.x) > 0.1) {
       controls.getObject().rotation.y -= turn.x * 0.015;
     }
@@ -675,19 +728,61 @@ function updateMovement(delta){
     if(!isBlocked(px,new THREE.Vector3(moveDir.x,0,0).normalize())) pivot.position.x+=moveDir.x*speed;
     const pz=pivot.position.clone().addScaledVector(new THREE.Vector3(0,0,moveDir.z),WALL_MARGIN+0.01);
     if(!isBlocked(pz,new THREE.Vector3(0,0,moveDir.z).normalize())) pivot.position.z+=moveDir.z*speed;
-    // Boden nur beim Bewegen prüfen — verhindert Zittern beim Umschauen
     if(collisionMeshes.length>0) pivot.position.y=groundHeight(pivot.position);
   }
 }
 
-// ── Render-Loop ──────────────────────────────────────────────────
+// ── VR-Teleportation Update ──────────────────────────────────────
+function updateVRTeleport() {
+  if (!renderer.xr.isPresenting) return;
+  
+  tempMatrix.identity().extractRotation(controller.matrixWorld);
+  raycasterVR.ray.origin.setFromMatrixPosition(controller.matrixWorld);
+  raycasterVR.ray.direction.set(0, 0, -1).applyMatrix4(tempMatrix);
+  raycasterVR.far = 50;
+  
+  const hits = raycasterVR.intersectObjects(collisionMeshes, true);
+  
+  if (hits.length > 0) {
+    const hit = hits[0];
+    // Nur flache Oberflächen (Normal zeigt nach oben > 0.7)
+    if (hit.face.normal.y > 0.7) {
+      teleportTarget = hit.point;
+      teleportMarker.position.copy(hit.point);
+      teleportMarker.visible = true;
+      teleportRay.material.color.setHex(0x00ff88); // Grün = gültig
+    } else {
+      teleportTarget = null;
+      teleportMarker.visible = false;
+      teleportRay.material.color.setHex(0xff4444); // Rot = ungültig (Wand/Decke)
+    }
+  } else {
+    teleportTarget = null;
+    teleportMarker.visible = false;
+    teleportRay.material.color.setHex(0xc8b89a); // Neutral
+  }
+}
+
+// ── Render-Loop (WebXR-kompatibel) ───────────────────────────────
 const clock=new THREE.Clock();
-function animate(){ requestAnimationFrame(animate); updateMovement(clock.getDelta()); renderer.render(scene,camera); }
+function animate(){
+  renderer.setAnimationLoop(() => {
+    const delta = clock.getDelta();
+    
+    if (renderer.xr.isPresenting) {
+      updateVRTeleport();
+    } else {
+      updateMovement(delta);
+    }
+    
+    renderer.render(scene, camera);
+  });
+}
 
 // ── Resize ───────────────────────────────────────────────────────
 window.addEventListener('resize',()=>{ camera.aspect=window.innerWidth/window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth,window.innerHeight); });
 
-// ── Kein Auto-Load mehr — Nutzer wählt selbst ────────────────────
+// ── Kein Auto-Load mehr ──────────────────────────────────────────
 </script>
 </body>
 </html>
