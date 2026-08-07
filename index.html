@@ -385,24 +385,21 @@ ambientLight.intensity = 1.5;
 dirLight.intensity = 1.2;
 
 // ═══════════════════════════════════════════════════════════════════
-// ═══ VR-TELEPORTATION SETUP ══════════════════════════════════════
+// ═══ VR-TELEPORTATION SETUP (KORRIGIERT) ══════════════════════════
 // ═══════════════════════════════════════════════════════════════════
 
-// Rechter Controller für Teleportation (Index 0)
 const controller = renderer.xr.getController(0);
 scene.add(controller);
 
-// Sichtbarer Ray aus dem Controller
 const rayGeo = new THREE.BufferGeometry().setFromPoints([
   new THREE.Vector3(0, 0, 0),
   new THREE.Vector3(0, 0, -1)
 ]);
 const rayMat = new THREE.LineBasicMaterial({ color: 0xc8b89a });
 const teleportRay = new THREE.Line(rayGeo, rayMat);
-teleportRay.scale.z = 30; // Länge des Rays
+teleportRay.scale.z = 30;
 controller.add(teleportRay);
 
-// Teleport-Ziel-Marker (Ring auf dem Boden)
 const ringGeo = new THREE.RingGeometry(0.15, 0.2, 32);
 ringGeo.rotateX(-Math.PI / 2);
 const ringMat = new THREE.MeshBasicMaterial({ color: 0xc8b89a, transparent: true, opacity: 0.8, side: THREE.DoubleSide });
@@ -411,18 +408,52 @@ teleportMarker.visible = false;
 scene.add(teleportMarker);
 
 let teleportTarget = null;
-const tempMatrix = new THREE.Matrix4();
 const raycasterVR = new THREE.Raycaster();
+const worldNormal = new THREE.Vector3();
 
-// Trigger-Klick = Teleportieren
 controller.addEventListener('select', () => {
   if (teleportTarget) {
     const pivot = controls.getObject();
-    pivot.position.set(teleportTarget.x, teleportTarget.y + EYE_HEIGHT, teleportTarget.z);
+    // In VR setzt man den Pivot direkt auf die Bodenhöhe, 
+    // da die Brille die tatsächliche Kopfhöhe des Nutzers nachverfolgt.
+    pivot.position.set(teleportTarget.x, teleportTarget.y, teleportTarget.z);
     teleportMarker.visible = false;
   }
 });
 
+function updateVRTeleport() {
+  if (!renderer.xr.isPresenting) return;
+  
+  // Exakte Welt-Position und Vorwärtsrichtung des Controllers abgreifen
+  raycasterVR.ray.origin.setFromMatrixPosition(controller.matrixWorld);
+  controller.getWorldDirection(raycasterVR.ray.direction).negate();
+  raycasterVR.far = 50;
+  
+  const hits = raycasterVR.intersectObjects(collisionMeshes, true);
+  
+  if (hits.length > 0) {
+    const hit = hits[0];
+    
+    // Normale korrekt in Welt-Koordinaten umrechnen
+    worldNormal.copy(hit.face.normal).transformDirection(hit.object.matrixWorld);
+    
+    // Nur begehbare waagerechte Flächen (Normale zeigt nach oben)
+    if (worldNormal.y > 0.7) {
+      teleportTarget = hit.point;
+      teleportMarker.position.copy(hit.point);
+      teleportMarker.visible = true;
+      teleportRay.material.color.setHex(0x00ff88); // Grün
+    } else {
+      teleportTarget = null;
+      teleportMarker.visible = false;
+      teleportRay.material.color.setHex(0xff4444); // Rot
+    }
+  } else {
+    teleportTarget = null;
+    teleportMarker.visible = false;
+    teleportRay.material.color.setHex(0xc8b89a); // Neutral
+  }
+}
 // ═══════════════════════════════════════════════════════════════════
 
 // ── Regler ───────────────────────────────────────────────────────
