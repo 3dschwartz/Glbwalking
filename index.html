@@ -3,57 +3,57 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
-<title>3D GLB Walking</title>
+<title>vrvrvr</title>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-body{background:#ffffff;font-family:'Courier New',monospace;color:#e0e0e0;overflow:hidden;height:100dvh;touch-action:none}
+body{background:#ffffff;color:#000000;font-family:Arial,Helvetica,sans-serif;font-size:14px;overflow:hidden;height:100dvh;touch-action:none}
 
-#loader{position:fixed;inset:0;background:#0a0a0a;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:24px;z-index:100;transition:opacity 0.6s ease}
+#loader{position:fixed;inset:0;background:#ffffff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:24px;z-index:100;transition:opacity 0.6s ease}
 #loader.hidden{opacity:0;pointer-events:none}
-#loader h1{font-size:clamp(1.2rem,3vw,1.8rem);font-weight:400;letter-spacing:0.3em;text-transform:uppercase;color:#c8b89a}
-.progress-bar{width:min(320px,80vw);height:2px;background:#2a2a2a}
-.progress-fill{height:100%;background:#c8b89a;width:0%;transition:width 0.3s ease}
-#loader-status{font-size:0.75rem;letter-spacing:0.15em;color:#666}
+#loader h1{font-weight:400;letter-spacing:0.3em;text-transform:uppercase;color:#000000}
+.progress-bar{width:min(320px,80vw);height:2px;background:#e0e0e0}
+.progress-fill{height:100%;background:#000000;width:0%;transition:width 0.3s ease}
+#loader-status{letter-spacing:0.15em;color:#666666}
 
 /* ── Startseite mit Raumauswahl ──────────────────────────── */
-#upload-screen{position:fixed;inset:0;background:#0a0a0a;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:28px;z-index:90;overflow-y:auto;padding:40px 20px}
+#upload-screen{position:fixed;inset:0;background:#ffffff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:28px;z-index:90;overflow-y:auto;padding:40px 20px}
 #upload-screen.hidden{display:none}
-#upload-screen h1{font-size:clamp(1.2rem,3vw,1.8rem);font-weight:400;letter-spacing:0.3em;text-transform:uppercase;color:#c8b89a}
-#upload-screen .subtitle{font-size:0.75rem;letter-spacing:0.2em;color:#555;text-transform:uppercase;margin-top:-18px}
+#upload-screen h1{font-weight:400;letter-spacing:0.3em;text-transform:uppercase;color:#000000}
+#upload-screen .subtitle{letter-spacing:0.2em;color:#555555;text-transform:uppercase;margin-top:-18px}
 
 .room-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:14px;width:min(480px,85vw)}
-.room-card{padding:18px 14px;background:transparent;border:1px solid #333;display:flex;flex-direction:column;align-items:center;gap:8px;cursor:pointer;transition:border-color 0.2s,background 0.2s}
-.room-card:hover,.room-card:active{border-color:#c8b89a;background:rgba(200,184,154,0.05)}
-.room-card .room-num{font-size:0.65rem;letter-spacing:0.2em;color:#555;text-transform:uppercase}
-.room-card .room-name{font-size:0.78rem;letter-spacing:0.15em;color:#888;text-transform:uppercase}
-.room-card.active{border-color:#c8b89a;background:rgba(200,184,154,0.08)}
+.room-card{padding:18px 14px;background:transparent;border:1px solid #cccccc;display:flex;flex-direction:column;align-items:center;gap:8px;cursor:pointer;transition:border-color 0.2s,background 0.2s}
+.room-card:hover,.room-card:active{border-color:#000000;background:rgba(0,0,0,0.04)}
+.room-card .room-num{letter-spacing:0.2em;color:#555555;text-transform:uppercase}
+.room-card .room-name{letter-spacing:0.15em;color:#888888;text-transform:uppercase}
+.room-card.active{border-color:#000000;background:rgba(0,0,0,0.05)}
 
-.divider-small{width:min(320px,60vw);height:1px;background:#222}
+.divider-small{width:min(320px,60vw);height:1px;background:#dddddd}
 
-#drop-zone{width:min(420px,85vw);height:120px;border:1px solid #333;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;cursor:pointer;transition:border-color 0.2s,background 0.2s}
-#drop-zone:hover,#drop-zone.dragover{border-color:#c8b89a;background:rgba(200,184,154,0.05)}
-#drop-zone .icon{font-size:2rem;opacity:0.4}
-#drop-zone p{font-size:0.72rem;letter-spacing:0.12em;color:#666;text-transform:uppercase;text-align:center;line-height:1.6}
+#drop-zone{width:min(420px,85vw);height:70px;border:1px solid #cccccc;display:flex;flex-direction:row;align-items:center;justify-content:center;gap:12px;cursor:pointer;transition:border-color 0.2s,background 0.2s}
+#drop-zone:hover,#drop-zone.dragover{border-color:#000000;background:rgba(0,0,0,0.04)}
+#drop-zone .icon{opacity:0.4}
+#drop-zone p{letter-spacing:0.12em;color:#666666;text-transform:uppercase;text-align:left;line-height:1.4}
 #file-input{display:none}
-.upload-btn{padding:10px 28px;background:transparent;border:1px solid #444;color:#888;font-family:'Courier New',monospace;font-size:0.72rem;letter-spacing:0.2em;text-transform:uppercase;cursor:pointer;transition:border-color 0.2s,color 0.2s}
-.upload-btn:hover,.upload-btn:active{border-color:#c8b89a;color:#c8b89a}
+.upload-btn{width:min(420px,85vw);height:70px;background:transparent;border:1px solid #bbbbbb;color:#888888;letter-spacing:0.2em;text-transform:uppercase;cursor:pointer;transition:border-color 0.2s,color 0.2s;display:flex;align-items:center;justify-content:center}
+.upload-btn:hover,.upload-btn:active{border-color:#000000;color:#000000}
 
 /* Overlay */
-#overlay{position:fixed;inset:0;background:rgba(10,10,10,0.88);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;z-index:50;backdrop-filter:blur(4px);transition:opacity 0.3s ease;overflow-y:auto;padding:20px 0}
+#overlay{position:fixed;inset:0;background:rgba(255,255,255,0.94);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;z-index:50;backdrop-filter:blur(4px);transition:opacity 0.3s ease;overflow-y:auto;padding:20px 0}
 #overlay.hidden{opacity:0;pointer-events:none}
-#overlay h2{font-size:clamp(1rem,2.5vw,1.4rem);font-weight:400;letter-spacing:0.25em;text-transform:uppercase;color:#c8b89a}
-.controls-hint{display:grid;grid-template-columns:auto 1fr;gap:5px 14px;font-size:0.75rem;letter-spacing:0.08em;color:#888;line-height:1.7}
-.controls-hint .key{color:#c8b89a;text-align:right}
+#overlay h2{font-weight:400;letter-spacing:0.25em;text-transform:uppercase;color:#000000}
+.controls-hint{display:grid;grid-template-columns:auto 1fr;gap:5px 14px;letter-spacing:0.08em;color:#888888;line-height:1.7}
+.controls-hint .key{color:#000000;text-align:right}
 .slider-row{display:flex;align-items:center;gap:10px}
-.slider-row label{font-size:0.72rem;letter-spacing:0.1em;color:#888;text-transform:uppercase;white-space:nowrap;width:100px;text-align:right}
-.slider-row input[type=range]{width:140px;accent-color:#c8b89a;cursor:pointer}
-.slider-row span{font-size:0.72rem;color:#c8b89a;width:38px;text-align:left}
-.divider{width:280px;height:1px;background:#222;margin:2px 0}
+.slider-row label{letter-spacing:0.1em;color:#888888;text-transform:uppercase;white-space:nowrap;width:100px;text-align:right}
+.slider-row input[type=range]{width:140px;accent-color:#000000;cursor:pointer}
+.slider-row span{color:#000000;width:38px;text-align:left}
+.divider{width:280px;height:1px;background:#dddddd;margin:2px 0}
 .btn-row{display:flex;gap:12px;margin-top:4px}
-.start-btn{padding:10px 32px;background:transparent;border:1px solid #c8b89a;color:#c8b89a;font-family:'Courier New',monospace;font-size:0.75rem;letter-spacing:0.25em;text-transform:uppercase;cursor:pointer;transition:background 0.2s,color 0.2s}
-.start-btn:hover,.start-btn:active{background:#c8b89a;color:#0a0a0a}
-.new-file-btn{padding:10px 20px;background:transparent;border:1px solid #333;color:#555;font-family:'Courier New',monospace;font-size:0.75rem;letter-spacing:0.2em;text-transform:uppercase;cursor:pointer;transition:border-color 0.2s,color 0.2s}
-.new-file-btn:hover,.new-file-btn:active{border-color:#888;color:#888}
+.start-btn{padding:10px 32px;background:transparent;border:1px solid #000000;color:#000000;letter-spacing:0.25em;text-transform:uppercase;cursor:pointer;transition:background 0.2s,color 0.2s}
+.start-btn:hover,.start-btn:active{background:#000000;color:#ffffff}
+.new-file-btn{padding:10px 20px;background:transparent;border:1px solid #cccccc;color:#555555;letter-spacing:0.2em;text-transform:uppercase;cursor:pointer;transition:border-color 0.2s,color 0.2s}
+.new-file-btn:hover,.new-file-btn:active{border-color:#888888;color:#888888}
 
 /* Fadenkreuz (nur Desktop) */
 #crosshair{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:20px;height:20px;pointer-events:none;z-index:10;opacity:0;transition:opacity 0.3s ease}
@@ -64,25 +64,50 @@ body{background:#ffffff;font-family:'Courier New',monospace;color:#e0e0e0;overfl
 
 #canvas{display:block;position:fixed;inset:0}
 
-#esc-hint{position:fixed;top:14px;right:16px;font-size:0.65rem;letter-spacing:0.15em;color:#555;text-transform:uppercase;pointer-events:none;z-index:10;opacity:0;transition:opacity 0.3s ease}
+#esc-hint{position:fixed;top:14px;right:16px;letter-spacing:0.15em;color:#555555;text-transform:uppercase;pointer-events:none;z-index:10;opacity:0;transition:opacity 0.3s ease}
 #esc-hint.visible{opacity:1}
 
 /* Touch-Joystick Bewegung (links) */
 #joystick-move{position:fixed;left:20px;bottom:40px;width:110px;height:110px;z-index:20;display:none}
 #joy-move-base{position:absolute;inset:0;border-radius:50%;border:2px solid rgba(80,140,255,0.5);background:rgba(80,140,255,0.08)}
 #joy-move-knob{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:44px;height:44px;border-radius:50%;background:rgba(80,140,255,0.6);pointer-events:none}
-#joy-move-label{position:absolute;bottom:-22px;left:50%;transform:translateX(-50%);font-size:0.55rem;letter-spacing:0.1em;color:rgba(80,140,255,0.6);text-transform:uppercase;white-space:nowrap}
+#joy-move-label{position:absolute;bottom:-22px;left:50%;transform:translateX(-50%);letter-spacing:0.1em;color:rgba(80,140,255,0.6);text-transform:uppercase;white-space:nowrap}
 
 /* Touch-Joystick Drehen (rechts) */
 #joystick-turn{position:fixed;right:20px;bottom:40px;width:110px;height:110px;z-index:20;display:none}
 #joy-turn-base{position:absolute;inset:0;border-radius:50%;border:2px solid rgba(80,140,255,0.5);background:rgba(80,140,255,0.08)}
 #joy-turn-knob{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:44px;height:44px;border-radius:50%;background:rgba(80,140,255,0.6);pointer-events:none}
-#joy-turn-label{position:absolute;bottom:-22px;left:50%;transform:translateX(-50%);font-size:0.55rem;letter-spacing:0.1em;color:rgba(80,140,255,0.6);text-transform:uppercase;white-space:nowrap}
+#joy-turn-label{position:absolute;bottom:-22px;left:50%;transform:translateX(-50%);letter-spacing:0.1em;color:rgba(80,140,255,0.6);text-transform:uppercase;white-space:nowrap}
 
 /* Pause-Button (Touch) */
-#pause-btn{position:fixed;top:14px;right:16px;z-index:30;display:none;padding:8px 16px;background:rgba(10,10,10,0.6);border:1px solid #444;color:#888;font-family:'Courier New',monospace;font-size:0.65rem;letter-spacing:0.15em;text-transform:uppercase;cursor:pointer;backdrop-filter:blur(4px)}
+#pause-btn{position:fixed;top:14px;right:16px;z-index:30;display:none;padding:8px 16px;background:rgba(255,255,255,0.85);border:1px solid #bbbbbb;color:#888888;letter-spacing:0.15em;text-transform:uppercase;cursor:pointer;backdrop-filter:blur(4px)}
 
-#info{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);font-size:0.65rem;letter-spacing:0.15em;color:#444;text-transform:uppercase;pointer-events:none;z-index:10}
+#info{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);letter-spacing:0.15em;color:#666666;text-transform:uppercase;pointer-events:none;z-index:10}
+
+/* VR-Button Styling */
+#VRButton {
+  position: fixed !important;
+  bottom: 20px !important;
+  left: 50% !important;
+  right: auto !important;
+  top: auto !important;
+  transform: translateX(-50%) !important;
+  z-index: 100 !important;
+  background: rgba(255,255,255,0.94) !important;
+  border: 1px solid #000000 !important;
+  color: #000000 !important;
+  
+  
+  letter-spacing: 0.2em !important;
+  text-transform: uppercase !important;
+  padding: 10px 28px !important;
+  cursor: pointer !important;
+  opacity: 1 !important;
+  backdrop-filter: blur(4px);
+}
+#VRButton:hover {
+  background: rgba(0,0,0,0.06) !important;
+}
 </style>
 <base target="_blank">
 </head>
@@ -142,8 +167,8 @@ body{background:#ffffff;font-family:'Courier New',monospace;color:#e0e0e0;overfl
   </div>
   <div class="slider-row">
     <label for="bg-color">&#9632; Hintergrund</label>
-    <input type="color" id="bg-color" value="#ffffff" style="width:50px;height:28px;border:1px solid #444;background:none;cursor:pointer;padding:2px" />
-    <span style="font-size:0.7rem;color:#555;letter-spacing:0.05em">Farbe</span>
+    <input type="color" id="bg-color" value="#ffffff" style="width:50px;height:28px;border:1px solid #bbbbbb;background:none;cursor:pointer;padding:2px" />
+    <span style="color:#555555;letter-spacing:0.05em">Farbe</span>
   </div>
   <div class="divider"></div>
   <div class="btn-row">
@@ -183,15 +208,10 @@ import * as THREE from 'three';
 import { GLTFLoader }          from 'three/addons/loaders/GLTFLoader.js';
 import { DRACOLoader }         from 'three/addons/loaders/DRACOLoader.js';
 import { PointerLockControls } from 'three/addons/controls/PointerLockControls.js';
+import { VRButton }            from 'three/addons/webxr/VRButton.js';
 
 // ═══════════════════════════════════════════════════════════════════
 // ═══ KONFIGURATION: Beispielräume mit individuellen Voreinstellungen
-// ═══════════════════════════════════════════════════════════════════
-// Hier kannst du ganz einfach Namen, Dateien und Werte anpassen.
-// brightness  = Helligkeit (0.5 – 8)
-// ibl         = IBL-Stärke (0 – 3)
-// eyeHeight   = Augenhöhe in Metern (0.5 – 2.5)
-// bgColor     = Hintergrundfarbe als Hex-String
 // ═══════════════════════════════════════════════════════════════════
 const ROOMS = [
   {
@@ -243,7 +263,6 @@ const ROOMS = [
     bgColor: '#fefefe'
   }
 ];
-
 // ═══════════════════════════════════════════════════════════════════
 
 // ── Geräteerkennung ──────────────────────────────────────────────
@@ -298,16 +317,79 @@ renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.5;
+renderer.xr.enabled = true; // WebXR aktivieren
+
+// ── VR-Button ──────────────────────────────────────────────────────
+const vrBtn = VRButton.createButton(renderer);
+document.body.appendChild(vrBtn);
+renderer.xr.addEventListener('sessionend', () => { debugSprite.visible = false; });
+renderer.xr.addEventListener('sessionstart', () => {
+  // Beim Betreten von VR den Dolly auf Bodenhöhe im Raumzentrum setzen.
+  // WICHTIG: hier die Bodenhöhe (nicht + Augenhöhe) verwenden, da die
+  // 'local-floor'-Referenz des Headsets die reale Körpergröße bereits
+  // selbst mitbringt - würde man hier zusätzlich EYE_HEIGHT addieren,
+  // stünde man beim Aufsetzen der Brille zu weit oben im Raum.
+  vrDolly.position.set(roomSpawnCenter.x, lastFloorY, roomSpawnCenter.z);
+  vrDolly.rotation.set(0, 0, 0);
+});
 
 // ── Szene ────────────────────────────────────────────────────────
 const scene = new THREE.Scene();
 let currentBgColor = new THREE.Color(0xffffff);
 scene.background = currentBgColor;
-scene.fog = new THREE.Fog(currentBgColor, 450, 500);
+scene.fog = new THREE.Fog(currentBgColor, 8, 25);
 
 // ── Kamera ───────────────────────────────────────────────────────
-const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.05, 500);
-scene.add(camera);
+const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.05, 50);
+
+// ── VR-Rig (Dolly) ───────────────────────────────────────────────
+// WICHTIG: PointerLockControls (moderne three.js-Versionen) bewegt die
+// Kamera direkt und legt sie NICHT mehr in ein separates Pivot-Objekt -
+// controls.getObject() gibt schlicht die Kamera zurück. Für Desktop/
+// Touch ist das genau richtig. Sobald aber eine WebXR-Session aktiv
+// ist, überschreibt der Browser JEDEN FRAME die lokale Position/
+// Rotation der Kamera anhand der Headset-Pose - eigene Änderungen an
+// camera.position/rotation gehen dort sofort wieder verloren (das war
+// der Grund, warum sich die Achsenwerte im Debug-HUD ändern, aber
+// nichts sichtbar bewegt).
+// Lösung: Die Kamera bekommt ein Eltern-Objekt (Dolly), das NUR in VR
+// bewegt/gedreht wird. Die Kamera selbst bewegt sich dann relativ dazu
+// ganz normal durchs Headset-Tracking. Im Desktop-/Touch-Modus bleibt
+// der Dolly bei (0,0,0) ohne Rotation, wirkt also wie ein reines
+// Durchreiche-Objekt - dort ändert sich nichts am bisherigen Verhalten.
+const vrDolly = new THREE.Object3D();
+scene.add(vrDolly);
+vrDolly.add(camera);
+
+// ── VR-Debug-HUD (nur im Headset sichtbar, folgt dem Blick) ───────
+// Da man in VR keine Browser-Konsole sehen kann, wird hier eine kleine
+// Textanzeige direkt vor die Kamera gehängt. Zeigt Session-Status,
+// erkannte Controller und deren Rohachsenwerte in Echtzeit.
+const debugCanvas = document.createElement('canvas');
+debugCanvas.width = 640; debugCanvas.height = 320;
+const debugCtx = debugCanvas.getContext('2d');
+const debugTexture = new THREE.CanvasTexture(debugCanvas);
+const debugSprite = new THREE.Sprite(new THREE.SpriteMaterial({
+  map: debugTexture, transparent: true, depthTest: false, depthWrite: false
+}));
+debugSprite.scale.set(0.7, 0.35, 1);
+debugSprite.position.set(0, -0.25, -0.8); // leicht unterhalb der Blickachse, 0.8m vor dem Kopf
+debugSprite.renderOrder = 999;
+debugSprite.visible = false;
+camera.add(debugSprite);
+
+let vrDebugEnabled = false; // auf false setzen, um das HUD wieder auszublenden
+function updateDebugHUD(lines) {
+  if (!vrDebugEnabled) { debugSprite.visible = false; return; }
+  debugSprite.visible = true;
+  debugCtx.clearRect(0, 0, debugCanvas.width, debugCanvas.height);
+  debugCtx.fillStyle = 'rgba(10,10,10,0.75)';
+  debugCtx.fillRect(0, 0, debugCanvas.width, debugCanvas.height);
+  debugCtx.fillStyle = '#c8b89a';
+  debugCtx.font = '22px monospace';
+  lines.forEach((line, i) => debugCtx.fillText(line, 16, 32 + i * 28));
+  debugTexture.needsUpdate = true;
+}
 
 // ── Beleuchtung ──────────────────────────────────────────────────
 const ambientLight = new THREE.AmbientLight(0xffffff, 1.5);
@@ -346,20 +428,186 @@ gltfLoader.setDRACOLoader(dracoLoader);
 
 // ── PointerLockControls (Desktop) ────────────────────────────────
 const controls = new PointerLockControls(camera, document.body);
-scene.add(controls.getObject());
+// HINWEIS: kein scene.add(controls.getObject()) hier - das würde die
+// Kamera aus dem vrDolly wieder direkt in die scene umhängen und den
+// VR-Fix oben zunichtemachen. controls.getObject() ist ohnehin nur
+// die Kamera selbst, die bereits über vrDolly.add(camera) korrekt
+// in der Szene hängt.
 
 let EYE_HEIGHT = 1.20;
 let lastFloorY = 0;
+let roomSpawnCenter = new THREE.Vector3(); // Raummitte, für VR-Dolly-Spawn (siehe sessionstart oben)
 let collisionMeshes = [];
 let currentModel = null;
 let animRunning = false;
-let touchActive = false;  // Touch-Modus aktiv
-let currentRoomConfig = null; // Aktuelle Raum-Konfiguration
+let touchActive = false;
 
 // Startwerte anwenden
 renderer.toneMappingExposure = 1.5;
 ambientLight.intensity = 1.5;
 dirLight.intensity = 1.2;
+
+// ═══════════════════════════════════════════════════════════════════
+// ═══ VR-TELEPORT-STEUERUNG (Comfort Locomotion) ══════════════════════
+// Statt kontinuierlicher Bewegung (verursacht bei vielen Leuten
+// Motion Sickness, da sich der Körper bewegt fühlt, aber der Innenohr-
+// Gleichgewichtssinn keine Bewegung meldet) wird jetzt teleportiert:
+// Trigger halten -> Strahl + Bodenmarker erscheinen, Trigger loslassen
+// -> sofortiger Sprung an die Zielposition. Dazu kommt Snap-Turn
+// (Drehen in festen 30°-Schritten statt sanft) - kontinuierliches
+// Drehen ist ein zweiter Hauptauslöser für Übelkeit in VR.
+// ═══════════════════════════════════════════════════════════════════
+const controller0 = renderer.xr.getController(0);
+const controller1 = renderer.xr.getController(1);
+vrDolly.add(controller0);
+vrDolly.add(controller1);
+
+const teleportRayGeometry = new THREE.BufferGeometry().setFromPoints([
+  new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0, -1)
+]);
+const teleportRayMaterial = new THREE.LineBasicMaterial({ color: 0xc8b89a, transparent: true, opacity: 0.85 });
+function makeTeleportRay() {
+  const line = new THREE.Line(teleportRayGeometry, teleportRayMaterial);
+  line.visible = false;
+  return line;
+}
+const teleportRay0 = makeTeleportRay(); controller0.add(teleportRay0);
+const teleportRay1 = makeTeleportRay(); controller1.add(teleportRay1);
+
+const teleportMarker = new THREE.Mesh(
+  new THREE.RingGeometry(0.18, 0.26, 32).rotateX(-Math.PI / 2),
+  new THREE.MeshBasicMaterial({ color: 0xc8b89a, transparent: true, opacity: 0.85, side: THREE.DoubleSide, depthTest: false })
+);
+teleportMarker.renderOrder = 998;
+teleportMarker.visible = false;
+scene.add(teleportMarker); // in Weltkoordinaten, da das Ziel ein absoluter Punkt im Raum ist
+
+let activeTeleportController = null;
+let teleportTargetValid = false;
+const teleportTarget = new THREE.Vector3();
+const tpRaycaster = new THREE.Raycaster();
+const tpOrigin = new THREE.Vector3(), tpDir = new THREE.Vector3(), tpQuat = new THREE.Quaternion();
+const TELEPORT_MAX_DIST = 15;
+
+function onTeleportSelectStart(event) { activeTeleportController = event.target; }
+function onTeleportSelectEnd() {
+  if (teleportTargetValid) {
+    vrDolly.position.x = teleportTarget.x;
+    vrDolly.position.z = teleportTarget.z;
+    vrDolly.position.y = teleportTarget.y;
+    lastFloorY = teleportTarget.y;
+  }
+  activeTeleportController = null;
+  teleportTargetValid = false;
+  teleportRay0.visible = false;
+  teleportRay1.visible = false;
+  teleportMarker.visible = false;
+}
+controller0.addEventListener('selectstart', onTeleportSelectStart);
+controller0.addEventListener('selectend', onTeleportSelectEnd);
+controller1.addEventListener('selectstart', onTeleportSelectStart);
+controller1.addEventListener('selectend', onTeleportSelectEnd);
+
+function updateTeleportAim() {
+  teleportRay0.visible = false;
+  teleportRay1.visible = false;
+  teleportMarker.visible = false;
+  teleportTargetValid = false;
+  if (!activeTeleportController || collisionMeshes.length === 0) return;
+
+  const controller = activeTeleportController;
+  const rayLine = controller === controller0 ? teleportRay0 : teleportRay1;
+
+  controller.getWorldPosition(tpOrigin);
+  controller.getWorldQuaternion(tpQuat);
+  tpDir.set(0, 0, -1).applyQuaternion(tpQuat).normalize();
+
+  tpRaycaster.set(tpOrigin, tpDir);
+  tpRaycaster.far = TELEPORT_MAX_DIST;
+  const hits = tpRaycaster.intersectObjects(collisionMeshes, true);
+  // Nur nach-oben-zeigende Flächen (Boden) als gültiges Ziel akzeptieren,
+  // damit man nicht versehentlich in eine Wand oder Decke teleportiert.
+  const floorHit = hits.find(h => h.face && h.face.normal && h.face.normal.y > 0.6);
+
+  rayLine.scale.z = floorHit ? floorHit.distance : TELEPORT_MAX_DIST;
+  rayLine.visible = true;
+
+  if (floorHit) {
+    teleportTarget.set(floorHit.point.x, floorHit.point.y, floorHit.point.z);
+    teleportMarker.position.set(floorHit.point.x, floorHit.point.y + 0.01, floorHit.point.z);
+    teleportMarker.visible = true;
+    teleportTargetValid = true;
+  }
+}
+// ═══════════════════════════════════════════════════════════════════
+
+// ═══════════════════════════════════════════════════════════════════
+// ═══ VR-CONTROLLER-STEUERUNG (Quest-Style) ═══════════════════════
+// ═══════════════════════════════════════════════════════════════════
+const VR_MOVE_SPEED = 3.5;
+const VR_TURN_SPEED = 2.0;
+
+const VR_SNAP_TURN_DEG = 30;
+let snapTurnReady = true; // verhindert, dass ein gehaltener Stick pro Frame weiterdreht
+
+function updateVRMovement(delta) {
+  const session = renderer.xr.getSession();
+  const hudLines = [];
+  if (!session) { updateDebugHUD(['Keine XR-Session aktiv']); return; }
+
+  let turnX = 0;
+
+  hudLines.push('Session aktiv | Inputs: ' + session.inputSources.length);
+
+  for (const src of session.inputSources) {
+    if (!src.gamepad) { hudLines.push('(kein Gamepad an Input-Quelle)'); continue; }
+
+    const gp = src.gamepad;
+    const axes = gp.axes || [];
+    // Achsen-Layout ist je nach Controller/Browser unterschiedlich.
+    // Meist axes[0,1] = Touchpad (ungenutzt, bleibt 0), axes[2,3] = Thumbstick.
+    // Statt starr auf Index 2/3 zu vertrauen: das Achsenpaar mit der
+    // größten Auslenkung nehmen (funktioniert für 2- UND 4-Achsen-Layouts).
+    let sx = 0, sy = 0;
+    if (axes.length >= 4) {
+      const magA = Math.abs(axes[0]) + Math.abs(axes[1]);
+      const magB = Math.abs(axes[2]) + Math.abs(axes[3]);
+      if (magB >= magA) { sx = axes[2]; sy = axes[3]; }
+      else { sx = axes[0]; sy = axes[1]; }
+    } else if (axes.length >= 2) {
+      sx = axes[0]; sy = axes[1];
+    }
+
+    const hand = src.handedness || '?';
+    hudLines.push(hand + ' axes[' + axes.length + ']: ' +
+      axes.map(a => a.toFixed(2)).join(', '));
+
+    // Bewegung läuft jetzt über Teleport (Trigger), nicht mehr über den
+    // linken Stick. Der rechte Stick wird nur noch fürs Snap-Turn benutzt.
+    if (hand === 'right' || (hand === '?' && session.inputSources[1] === src)) {
+      turnX = sx;
+    }
+  }
+
+  // Snap-Turn: Stick über Schwelle auslenken -> einmalig fester Sprung um
+  // VR_SNAP_TURN_DEG. Erst wenn der Stick wieder in die Mitte zurückkehrt,
+  // ist die nächste Drehung "scharf". Das vermeidet die Übelkeit von
+  // kontinuierlicher Rotation komplett.
+  if (Math.abs(turnX) > 0.6) {
+    if (snapTurnReady) {
+      vrDolly.rotation.y -= Math.sign(turnX) * THREE.MathUtils.degToRad(VR_SNAP_TURN_DEG);
+      snapTurnReady = false;
+    }
+  } else {
+    snapTurnReady = true;
+  }
+
+  updateTeleportAim();
+
+  hudLines.push('turnX: ' + turnX.toFixed(2) + '  Teleport-Ziel: ' + (teleportTargetValid ? 'ja' : 'nein'));
+  updateDebugHUD(hudLines);
+}
+// ═══════════════════════════════════════════════════════════════════
 
 // ── Regler ───────────────────────────────────────────────────────
 bSlider.addEventListener('input', () => {
@@ -468,7 +716,6 @@ function joystickHandler(el, knob, store, onlyY) {
       let dy   = t.clientY - c.y;
       const len = Math.sqrt(dx*dx + dy*dy);
       if (len > JOY_RADIUS) { dx=dx/len*JOY_RADIUS; dy=dy/len*JOY_RADIUS; }
-      // Linker Joystick: nur Y (vor/zurück), X ignorieren
       store.x = onlyY ? 0 : dx / JOY_RADIUS;
       store.y = dy / JOY_RADIUS;
       knob.style.transform = onlyY
@@ -488,8 +735,8 @@ function joystickHandler(el, knob, store, onlyY) {
   el.addEventListener('touchcancel', end);
 }
 
-joystickHandler(joystickMove, joyMoveKnob, move, true);   // nur vor/zurück
-joystickHandler(joystickTurn, joyTurnKnob, turn, false);  // nur drehen (X)
+joystickHandler(joystickMove, joyMoveKnob, move, true);
+joystickHandler(joystickTurn, joyTurnKnob, turn, false);
 
 // ── Räume dynamisch generieren ───────────────────────────────────
 function buildRoomCards() {
@@ -512,9 +759,7 @@ buildRoomCards();
 // ── Raum laden mit Voreinstellungen ──────────────────────────────
 function loadRoomByIndex(index) {
   const config = ROOMS[index];
-  currentRoomConfig = config;
   
-  // Voreinstellungen anwenden
   EYE_HEIGHT = config.eyeHeight;
   hSlider.value = config.eyeHeight;
   hVal.textContent = config.eyeHeight.toFixed(2) + ' m';
@@ -537,7 +782,7 @@ function loadRoomByIndex(index) {
   loadGLBFromURL(config.file);
 }
 
-// ── Drag & Drop (Desktop) ────────────────────────────────────────
+// ── Drag & Drop ───────────────────────────────────────────────────
 dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
 dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
 dropZone.addEventListener('drop', e => {
@@ -592,25 +837,33 @@ function setupModel(gltf, filename) {
   const box=new THREE.Box3().setFromObject(model);
   const center=box.getCenter(new THREE.Vector3());
   
-  // ── KORREKTUR: Boden als NIEDRIGSTEN Trefferpunkt ermitteln ──
-  // Ray von oben nach unten schießen, um den Boden zu finden
+  // ── KORREKTUR: Boden anhand der Flächen-Normalen erkennen ──
+  // Ray von oben nach unten durch das Zentrum
   const startRay=new THREE.Raycaster(
-    new THREE.Vector3(center.x, box.max.y + 1, center.z),
+    new THREE.Vector3(center.x, box.max.y + 2, center.z),
     new THREE.Vector3(0, -1, 0),
     0,
-    (box.max.y - box.min.y) + 2
+    (box.max.y - box.min.y) + 4
   );
   const hits=startRay.intersectObjects(collisionMeshes,true);
   
-  // Niedrigsten Trefferpunkt als Boden verwenden (nicht höchsten!)
   if (hits.length > 0) {
-    lastFloorY = Math.min(...hits.map(h => h.point.y));
+    // Suche den obersten Treffer, dessen Normale nach oben zeigt (Boden)
+    // Das verhindert, dass wir auf dem Dach oder im Keller landen
+    const floorHit = hits.find(h => h.face && h.face.normal && h.face.normal.y > 0.5);
+    if (floorHit) {
+      lastFloorY = floorHit.point.y;
+    } else {
+      // Fallback: keine nach-oben zeigende Fläche gefunden
+      lastFloorY = box.min.y;
+    }
   } else {
     lastFloorY = box.min.y;
   }
   
   // Kamera auf Bodenhöhe + Augenhöhe setzen
   controls.getObject().position.set(center.x, lastFloorY + EYE_HEIGHT, center.z);
+  roomSpawnCenter.set(center.x, 0, center.z);
 
   overlayTitle.textContent=filename.replace(/\.glb$/i,'');
   loaderEl.classList.add('hidden');
@@ -632,7 +885,25 @@ function groundHeight(pos){
     lastFloorY=(pos.y-0.05)-hits[0].distance;
     const targetY = lastFloorY + EYE_HEIGHT;
     const diff = targetY - pos.y;
-    // Schwellwert: unter 2mm nicht anpassen — verhindert Zittern auf ebenem Boden
+    if (Math.abs(diff) < 0.002) return pos.y;
+    if (Math.abs(diff) > 1.0) return pos.y + diff * 0.5;
+    return pos.y + diff * 0.15;
+  }
+  return pos.y;
+}
+
+// Wie groundHeight(), aber für den VR-Dolly: der sitzt selbst auf
+// Bodenhöhe (nicht auf Augenhöhe wie die Desktop-Kamera), da die
+// tatsächliche Augenhöhe schon über das Headset-Tracking dazukommt.
+// Deshalb wird hier von oberhalb (ungefähre Kopfhöhe) nach unten
+// gestrahlt und als Ziel direkt die Bodenhöhe verwendet (ohne +EYE_HEIGHT).
+function vrGroundHeight(pos){
+  floorRay.set(new THREE.Vector3(pos.x, pos.y+EYE_HEIGHT-0.05, pos.z),DOWN); floorRay.far=FLOOR_SEARCH;
+  const hits=floorRay.intersectObjects(collisionMeshes,true);
+  if(hits.length>0){
+    const floorY=(pos.y+EYE_HEIGHT-0.05)-hits[0].distance;
+    lastFloorY=floorY;
+    const diff = floorY - pos.y;
     if (Math.abs(diff) < 0.002) return pos.y;
     if (Math.abs(diff) > 1.0) return pos.y + diff * 0.5;
     return pos.y + diff * 0.15;
@@ -651,17 +922,14 @@ function updateMovement(delta){
   moveDir.set(0,0,0);
 
   if (!isTouch) {
-    // Desktop: WASD
     if(!controls.isLocked) return;
     if(keys.w) moveDir.addScaledVector(tmpVec, 1);
     if(keys.s) moveDir.addScaledVector(tmpVec,-1);
     if(keys.a) moveDir.addScaledVector(right, -1);
     if(keys.d) moveDir.addScaledVector(right,  1);
   } else {
-    // Touch: linker Joystick nur vor/zurück, rechter Joystick nur drehen
     if (!touchActive) return;
     if (Math.abs(move.y) > 0.1) moveDir.addScaledVector(tmpVec, -move.y);
-    // Drehen: rechter Joystick X dreht die Kamera horizontal
     if (Math.abs(turn.x) > 0.1) {
       controls.getObject().rotation.y -= turn.x * 0.015;
     }
@@ -675,19 +943,30 @@ function updateMovement(delta){
     if(!isBlocked(px,new THREE.Vector3(moveDir.x,0,0).normalize())) pivot.position.x+=moveDir.x*speed;
     const pz=pivot.position.clone().addScaledVector(new THREE.Vector3(0,0,moveDir.z),WALL_MARGIN+0.01);
     if(!isBlocked(pz,new THREE.Vector3(0,0,moveDir.z).normalize())) pivot.position.z+=moveDir.z*speed;
-    // Boden nur beim Bewegen prüfen — verhindert Zittern beim Umschauen
     if(collisionMeshes.length>0) pivot.position.y=groundHeight(pivot.position);
   }
 }
 
-// ── Render-Loop ──────────────────────────────────────────────────
+// ── Render-Loop (WebXR-kompatibel) ───────────────────────────────
 const clock=new THREE.Clock();
-function animate(){ requestAnimationFrame(animate); updateMovement(clock.getDelta()); renderer.render(scene,camera); }
+function animate(){
+  renderer.setAnimationLoop(() => {
+    const delta = clock.getDelta();
+    
+    if (renderer.xr.isPresenting) {
+      updateVRMovement(delta);
+    } else {
+      updateMovement(delta);
+    }
+    
+    renderer.render(scene, camera);
+  });
+}
 
 // ── Resize ───────────────────────────────────────────────────────
 window.addEventListener('resize',()=>{ camera.aspect=window.innerWidth/window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth,window.innerHeight); });
 
-// ── Kein Auto-Load mehr — Nutzer wählt selbst ────────────────────
+// ── Kein Auto-Load mehr ──────────────────────────────────────────
 </script>
 </body>
 </html>
