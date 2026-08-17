@@ -836,6 +836,11 @@ function setupModel(gltf, filename) {
 
   const box=new THREE.Box3().setFromObject(model);
   const center=box.getCenter(new THREE.Vector3());
+
+  // Boden-Suchreichweite an die Gebäudehöhe anpassen (mit Sicherheitspuffer).
+  // Bei einer hohen Fabrikhalle reicht eine feste 5m-Reichweite nicht aus,
+  // um beim Gehen/Teleportieren zuverlässig den Boden unter sich zu finden.
+  FLOOR_SEARCH = Math.max(5.0, (box.max.y - box.min.y) + 5.0);
   
   // ── KORREKTUR: Boden anhand der Flächen-Normalen erkennen ──
   // Ray von oben nach unten durch das Zentrum
@@ -848,11 +853,17 @@ function setupModel(gltf, filename) {
   const hits=startRay.intersectObjects(collisionMeshes,true);
   
   if (hits.length > 0) {
-    // Suche den obersten Treffer, dessen Normale nach oben zeigt (Boden)
-    // Das verhindert, dass wir auf dem Dach oder im Keller landen
-    const floorHit = hits.find(h => h.face && h.face.normal && h.face.normal.y > 0.5);
-    if (floorHit) {
-      lastFloorY = floorHit.point.y;
+    // Suche unter ALLEN nach-oben zeigenden Treffern den NIEDRIGSTEN.
+    // Wichtig bei hohen/offenen Gebäuden (z.B. Fabrikhallen): der Strahl
+    // trifft von oben kommend oft zuerst einen Dachbalken (der hat auch
+    // eine nach oben zeigende Fläche!), bevor er den echten Boden
+    // erreicht. Nimmt man einfach den ERSTEN Treffer, landet man auf dem
+    // Balken statt auf dem Boden. Der niedrigste Treffer mit nach-oben
+    // zeigender Normale ist fast immer der tatsächliche Fußboden.
+    const floorCandidates = hits.filter(h => h.face && h.face.normal && h.face.normal.y > 0.5);
+    if (floorCandidates.length > 0) {
+      const lowestHit = floorCandidates.reduce((a, b) => a.point.y < b.point.y ? a : b);
+      lastFloorY = lowestHit.point.y;
     } else {
       // Fallback: keine nach-oben zeigende Fläche gefunden
       lastFloorY = box.min.y;
@@ -874,7 +885,8 @@ function setupModel(gltf, filename) {
 // ── Kollision ────────────────────────────────────────────────────
 const wallRay=new THREE.Raycaster(), floorRay=new THREE.Raycaster();
 const DOWN=new THREE.Vector3(0,-1,0);
-const WALL_MARGIN=0.35, MOVE_SPEED=3.5, FLOOR_SEARCH=5.0;
+const WALL_MARGIN=0.35, MOVE_SPEED=3.5;
+let FLOOR_SEARCH=5.0; // wird beim Laden je nach Gebäudehöhe angepasst (siehe setupModel)
 
 function isBlocked(origin,dir){ wallRay.set(origin,dir); wallRay.far=WALL_MARGIN; return wallRay.intersectObjects(collisionMeshes,true).length>0; }
 
