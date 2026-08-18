@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
-<title>vrvrvr</title>
+<title>up1808</title>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 body{background:#ffffff;color:#000000;font-family:Arial,Helvetica,sans-serif;font-size:14px;overflow:hidden;height:100dvh;touch-action:none}
@@ -21,18 +21,17 @@ body{background:#ffffff;color:#000000;font-family:Arial,Helvetica,sans-serif;fon
 #upload-screen h1{font-weight:400;letter-spacing:0.3em;text-transform:uppercase;color:#000000}
 #upload-screen .subtitle{letter-spacing:0.2em;color:#555555;text-transform:uppercase;margin-top:-18px}
 
-.room-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:14px;width:min(480px,85vw)}
+.room-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;width:min(620px,92vw)}
 .room-card{padding:18px 14px;background:transparent;border:1px solid #cccccc;display:flex;flex-direction:column;align-items:center;gap:8px;cursor:pointer;transition:border-color 0.2s,background 0.2s}
 .room-card:hover,.room-card:active{border-color:#000000;background:rgba(0,0,0,0.04)}
-.room-card .room-num{letter-spacing:0.2em;color:#555555;text-transform:uppercase}
-.room-card .room-name{letter-spacing:0.15em;color:#888888;text-transform:uppercase}
+.room-card .room-category{letter-spacing:0.15em;color:#888888}
+.room-card .room-name{letter-spacing:0.1em;color:#000000}
 .room-card.active{border-color:#000000;background:rgba(0,0,0,0.05)}
 
 .divider-small{width:min(320px,60vw);height:1px;background:#dddddd}
 
 #drop-zone{width:min(420px,85vw);height:70px;border:1px solid #cccccc;display:flex;flex-direction:row;align-items:center;justify-content:center;gap:12px;cursor:pointer;transition:border-color 0.2s,background 0.2s}
 #drop-zone:hover,#drop-zone.dragover{border-color:#000000;background:rgba(0,0,0,0.04)}
-#drop-zone .icon{opacity:0.4}
 #drop-zone p{letter-spacing:0.12em;color:#666666;text-transform:uppercase;text-align:left;line-height:1.4}
 #file-input{display:none}
 .upload-btn{width:min(420px,85vw);height:70px;background:transparent;border:1px solid #bbbbbb;color:#888888;letter-spacing:0.2em;text-transform:uppercase;cursor:pointer;transition:border-color 0.2s,color 0.2s;display:flex;align-items:center;justify-content:center}
@@ -44,11 +43,11 @@ body{background:#ffffff;color:#000000;font-family:Arial,Helvetica,sans-serif;fon
 #overlay h2{font-weight:400;letter-spacing:0.25em;text-transform:uppercase;color:#000000}
 .controls-hint{display:grid;grid-template-columns:auto 1fr;gap:5px 14px;letter-spacing:0.08em;color:#888888;line-height:1.7}
 .controls-hint .key{color:#000000;text-align:right}
-.slider-row{display:flex;align-items:center;gap:10px}
-.slider-row label{letter-spacing:0.1em;color:#888888;text-transform:uppercase;white-space:nowrap;width:100px;text-align:right}
-.slider-row input[type=range]{width:140px;accent-color:#000000;cursor:pointer}
-.slider-row span{color:#000000;width:38px;text-align:left}
-.divider{width:280px;height:1px;background:#dddddd;margin:2px 0}
+.settings-grid{display:grid;grid-template-columns:auto minmax(90px,140px) auto;column-gap:10px;row-gap:10px;align-items:center;width:min(320px,88vw)}
+.settings-grid label{letter-spacing:0.1em;color:#888888;text-transform:uppercase;text-align:left;white-space:nowrap}
+.settings-grid input[type=range]{width:100%;accent-color:#000000;cursor:pointer}
+.settings-grid span{color:#000000;text-align:left;font-size:inherit;white-space:nowrap}
+.divider{width:min(320px,88vw);height:1px;background:#dddddd;margin:2px 0}
 .btn-row{display:flex;gap:12px;margin-top:4px}
 .start-btn{padding:10px 32px;background:transparent;border:1px solid #000000;color:#000000;letter-spacing:0.25em;text-transform:uppercase;cursor:pointer;transition:background 0.2s,color 0.2s}
 .start-btn:hover,.start-btn:active{background:#000000;color:#ffffff}
@@ -122,7 +121,7 @@ body{background:#ffffff;color:#000000;font-family:Arial,Helvetica,sans-serif;fon
 <!-- ── Startseite mit Raumauswahl ──────────────────────────── -->
 <div id="upload-screen">
   <h1>GLB Walking</h1>
-  <p class="subtitle">Wähle einen Raum oder lade deine eigene Datei hoch</p>
+  <p class="subtitle">Choose a room or upload your own file, for PC/mobile/VR</p>
   
   <div class="room-grid" id="room-grid">
     <!-- Räume werden dynamisch aus ROOMS generiert -->
@@ -131,10 +130,8 @@ body{background:#ffffff;color:#000000;font-family:Arial,Helvetica,sans-serif;fon
   <div class="divider-small"></div>
   
   <div id="drop-zone">
-    <div class="icon">&#8682;</div>
-    <p>Eigene GLB-Datei hier hineinziehen<br>oder antippen</p>
+    <p>drag or upload your own GLB file here</p>
   </div>
-  <button class="upload-btn" id="browse-btn">Datei auswählen</button>
   <input type="file" id="file-input" accept=".glb,.GLB,model/gltf-binary,application/octet-stream,*/*" />
 </div>
 
@@ -150,25 +147,22 @@ body{background:#ffffff;color:#000000;font-family:Arial,Helvetica,sans-serif;fon
     <span class="key">Rechts</span><span>Wischen zum Umsehen</span>
   </div>
   <div class="divider"></div>
-  <div class="slider-row">
-    <label for="brightness-slider">&#9728; Helligkeit</label>
+  <div class="settings-grid">
+    <label for="brightness-slider">Helligkeit</label>
     <input type="range" id="brightness-slider" min="0.5" max="8" step="0.1" value="3.0" />
     <span id="brightness-value">3.0</span>
-  </div>
-  <div class="slider-row">
-    <label for="ibl-strength">&#10022; IBL St&auml;rke</label>
+
+    <label for="ibl-strength">IBL St&auml;rke</label>
     <input type="range" id="ibl-strength" min="0" max="3" step="0.1" value="0.2" />
     <span id="ibl-strength-value">0.2</span>
-  </div>
-  <div class="slider-row">
-    <label for="height-slider">&#8597; Augenh&ouml;he</label>
+
+    <label for="height-slider">Augenh&ouml;he</label>
     <input type="range" id="height-slider" min="0.5" max="2.5" step="0.05" value="1.20" />
     <span id="height-value">1.20 m</span>
-  </div>
-  <div class="slider-row">
-    <label for="bg-color">&#9632; Hintergrund</label>
+
+    <label for="bg-color">Hintergrund</label>
     <input type="color" id="bg-color" value="#ffffff" style="width:50px;height:28px;border:1px solid #bbbbbb;background:none;cursor:pointer;padding:2px" />
-    <span style="color:#555555;letter-spacing:0.05em">Farbe</span>
+    <span></span>
   </div>
   <div class="divider"></div>
   <div class="btn-row">
@@ -215,50 +209,94 @@ import { VRButton }            from 'three/addons/webxr/VRButton.js';
 // ═══════════════════════════════════════════════════════════════════
 const ROOMS = [
   {
+    category: '3D Scan',
     name: 'Tunnel',
-    file: 'room_example_1.glb',
+    file: 'example_01.glb',
     brightness: 3.0,
     ibl: 0.2,
     eyeHeight: 1.20,
     bgColor: '#fefefe'
   },
   {
-    name: 'Treppenhaus',
-    file: 'room_example_2.glb',
+    category: '3D Scan',
+    name: 'Stairwell',
+    file: 'example_02.glb',
     brightness: 2.5,
     ibl: 0.5,
     eyeHeight: 1.20,
     bgColor: '#fefefe'
   },
   {
-    name: 'Scaterpark',
-    file: 'room_example_3.glb',
+    category: '3D Scan',
+    name: 'Scatepark',
+    file: 'example_03.glb',
     brightness: 4.0,
     ibl: 0.1,
     eyeHeight: 1.20,
      bgColor: '#fefefe'
   },
   {
-    name: 'Keller',
-    file: 'room_example_4.glb',
+    category: '3D Scan',
+    name: 'Basement',
+    file: 'example_04.glb',
     brightness: 1.8,
     ibl: 1.0,
     eyeHeight: 1.20,
     bgColor: '#7a7a7a'
   },
   {
-    name: 'Auffahrt',
-    file: 'room_example_5.glb',
+    category: '3D Scan',
+    name: 'Driveway',
+    file: 'example_05.glb',
     brightness: 3.5,
     ibl: 0.3,
     eyeHeight: 1.20,
     bgColor: '#f5f0e8'
   },
   {
-    name: 'Wohnung',
-    file: 'room_example_6.glb',
+    category: '3D Scan',
+    name: 'Technical building',
+    file: 'example_06.glb',
     brightness: 2.0,
     ibl: 1.0,
+    eyeHeight: 1.20,
+    bgColor: '#fefefe'
+  },
+  {
+    category: '3D Konstruction',
+    name: 'old appartement',
+    file: 'example_07.glb',
+    brightness: 2.5,
+    ibl: 0.5,
+    eyeHeight: 1.20,
+    bgColor: '#fefefe'
+  },
+  {
+    category: '3D Konstruction',
+    name: 'no data',
+    file: 'example_08.glb',
+    brightness: 3.0,
+    ibl: 0.3,
+    eyeHeight: 1.20,
+    bgColor: '#fefefe'
+  },
+  {
+    category: '3D Konstruction',
+    name: 'no data',
+    file: 'example_09.glb',
+    brightness: 3.5,
+    ibl: 0.4,
+    eyeHeight: 1.20,
+    bgColor: '#f0f0f0'
+  },
+  // ── NEU: 10. Beispiel - Platzhalter, Datei noch als example_10.glb
+  // hinzufügen (Kategorie/Name/Lichtwerte nach Bedarf anpassen) ────
+  {
+    category: '3D Konstruction',
+    name: 'no data',
+    file: 'example_10.glb',
+    brightness: 3.0,
+    ibl: 0.3,
     eyeHeight: 1.20,
     bgColor: '#fefefe'
   }
@@ -280,7 +318,6 @@ const progressBar   = document.getElementById('progress-fill');
 const statusText    = document.getElementById('loader-status');
 const startBtn      = document.getElementById('start-btn');
 const newFileBtn    = document.getElementById('new-file-btn');
-const browseBtn     = document.getElementById('browse-btn');
 const fileInput     = document.getElementById('file-input');
 const dropZone      = document.getElementById('drop-zone');
 const bSlider       = document.getElementById('brightness-slider');
@@ -323,6 +360,7 @@ renderer.xr.enabled = true; // WebXR aktivieren
 const vrBtn = VRButton.createButton(renderer);
 document.body.appendChild(vrBtn);
 renderer.xr.addEventListener('sessionend', () => { debugSprite.visible = false; });
+let needsVRHeightCalibration = false;
 renderer.xr.addEventListener('sessionstart', () => {
   // Beim Betreten von VR den Dolly auf Bodenhöhe im Raumzentrum setzen.
   // WICHTIG: hier die Bodenhöhe (nicht + Augenhöhe) verwenden, da die
@@ -331,16 +369,24 @@ renderer.xr.addEventListener('sessionstart', () => {
   // stünde man beim Aufsetzen der Brille zu weit oben im Raum.
   vrDolly.position.set(roomSpawnCenter.x, lastFloorY, roomSpawnCenter.z);
   vrDolly.rotation.set(0, 0, 0);
+  // Die reale Körpergröße des Trägers überschreibt sonst die eingestellte
+  // Augenhöhe komplett. Um die Voreinstellung trotzdem wirksam zu machen,
+  // wird EINMALIG (sobald die erste echte Headset-Pose vorliegt, siehe
+  // updateVRMovement) die Differenz zur eingestellten Augenhöhe gemessen
+  // und als Höhen-Offset auf den Dolly gelegt. Duckt oder streckt man
+  // sich danach, bleibt das natürliche Kopf-Tracking relativ zu diesem
+  // Ausgangspunkt trotzdem voll erhalten.
+  needsVRHeightCalibration = true;
 });
 
 // ── Szene ────────────────────────────────────────────────────────
 const scene = new THREE.Scene();
 let currentBgColor = new THREE.Color(0xffffff);
 scene.background = currentBgColor;
-scene.fog = new THREE.Fog(currentBgColor, 8, 25);
+scene.fog = null; // Nebel deaktiviert - Sichtweite jetzt bis zur Far-Plane der Kamera (600m)
 
 // ── Kamera ───────────────────────────────────────────────────────
-const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.05, 50);
+const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.05, 650);
 
 // ── VR-Rig (Dolly) ───────────────────────────────────────────────
 // WICHTIG: PointerLockControls (moderne three.js-Versionen) bewegt die
@@ -492,9 +538,13 @@ const TELEPORT_MAX_DIST = 15;
 function onTeleportSelectStart(event) { activeTeleportController = event.target; }
 function onTeleportSelectEnd() {
   if (teleportTargetValid) {
+    // Höhen-Offset aus der Augenhöhen-Kalibrierung (siehe updateVRMovement)
+    // beibehalten, sonst würde jeder Teleport zurück auf reine Bodenhöhe
+    // springen und die Voreinstellung wieder verlieren.
+    const heightOffset = vrDolly.position.y - lastFloorY;
     vrDolly.position.x = teleportTarget.x;
     vrDolly.position.z = teleportTarget.z;
-    vrDolly.position.y = teleportTarget.y;
+    vrDolly.position.y = teleportTarget.y + heightOffset;
     lastFloorY = teleportTarget.y;
   }
   activeTeleportController = null;
@@ -554,6 +604,18 @@ function updateVRMovement(delta) {
   const session = renderer.xr.getSession();
   const hudLines = [];
   if (!session) { updateDebugHUD(['Keine XR-Session aktiv']); return; }
+
+  // Augenhöhen-Voreinstellung in VR anwenden (einmalig, siehe sessionstart).
+  // camera.position.y ist zu diesem Zeitpunkt bereits die ECHTE, vom
+  // Headset getrackte Höhe über dem Dolly-Boden - die reale Körpergröße
+  // des Trägers. Die Differenz zur gewünschten EYE_HEIGHT wird als
+  // Offset auf den Dolly gelegt, danach bleibt normales Kopf-Tracking
+  // (Ducken, Strecken) relativ zu diesem Ausgangspunkt erhalten.
+  if (needsVRHeightCalibration && camera.position.y > 0.01) {
+    const offset = EYE_HEIGHT - camera.position.y;
+    vrDolly.position.y = lastFloorY + offset;
+    needsVRHeightCalibration = false;
+  }
 
   let turnX = 0;
 
@@ -631,7 +693,6 @@ hSlider.addEventListener('input', () => {
 bgColor.addEventListener('input', () => {
   currentBgColor = new THREE.Color(bgColor.value);
   scene.background = currentBgColor;
-  scene.fog = new THREE.Fog(currentBgColor, 8, 25);
 });
 
 // ── Desktop: PointerLock ─────────────────────────────────────────
@@ -745,7 +806,7 @@ function buildRoomCards() {
     const card = document.createElement('div');
     card.className = 'room-card';
     card.dataset.index = index;
-    card.innerHTML = `<span class="room-name">${room.name}</span>`;
+    card.innerHTML = `<span class="room-category">${room.category}</span><span class="room-name">${room.name}</span>`;
     card.addEventListener('click', () => {
       document.querySelectorAll('.room-card').forEach(c => c.classList.remove('active'));
       card.classList.add('active');
@@ -777,7 +838,6 @@ function loadRoomByIndex(index) {
   bgColor.value = config.bgColor;
   currentBgColor = new THREE.Color(config.bgColor);
   scene.background = currentBgColor;
-  scene.fog = new THREE.Fog(currentBgColor, 8, 25);
   
   loadGLBFromURL(config.file);
 }
@@ -790,7 +850,6 @@ dropZone.addEventListener('drop', e => {
   const f=e.dataTransfer.files[0]; if(f) loadGLBFromFile(f);
 });
 dropZone.addEventListener('click', () => fileInput.click());
-browseBtn.addEventListener('click', () => fileInput.click());
 fileInput.addEventListener('change', e => {
   const f=e.target.files[0]; if(f) loadGLBFromFile(f); fileInput.value='';
 });
