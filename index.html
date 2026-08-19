@@ -16,7 +16,7 @@ body{background:#ffffff;color:#000000;font-family:Arial,Helvetica,sans-serif;fon
 #loader-status{letter-spacing:0.15em;color:#666666}
 
 /* ── Startseite mit Raumauswahl ──────────────────────────── */
-#upload-screen{position:fixed;inset:0;background:#ffffff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:28px;z-index:90;overflow-y:auto;padding:40px 20px}
+#upload-screen{position:fixed;inset:0;background:#ffffff;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:28px;z-index:90;overflow-y:auto;padding:40px 20px;touch-action:pan-y}
 #upload-screen.hidden{display:none}
 #upload-screen h1{font-weight:400;letter-spacing:0.3em;text-transform:uppercase;color:#000000}
 #upload-screen .subtitle{letter-spacing:0.2em;color:#555555;text-transform:uppercase;margin-top:-18px}
@@ -38,7 +38,7 @@ body{background:#ffffff;color:#000000;font-family:Arial,Helvetica,sans-serif;fon
 .upload-btn:hover,.upload-btn:active{border-color:#000000;color:#000000}
 
 /* Overlay */
-#overlay{position:fixed;inset:0;background:rgba(255,255,255,0.94);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;z-index:50;backdrop-filter:blur(4px);transition:opacity 0.3s ease;overflow-y:auto;padding:20px 0}
+#overlay{position:fixed;inset:0;background:rgba(255,255,255,0.94);display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:14px;z-index:50;backdrop-filter:blur(4px);transition:opacity 0.3s ease;overflow-y:auto;padding:40px 0;touch-action:pan-y}
 #overlay.hidden{opacity:0;pointer-events:none}
 #overlay h2{font-weight:400;letter-spacing:0.25em;text-transform:uppercase;color:#000000}
 .controls-hint{display:grid;grid-template-columns:auto 1fr;gap:5px 14px;letter-spacing:0.08em;color:#888888;line-height:1.7}
@@ -115,7 +115,7 @@ body{background:#ffffff;color:#000000;font-family:Arial,Helvetica,sans-serif;fon
 <div id="loader" class="hidden">
   <h1>GLB Walking</h1>
   <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
-  <span id="loader-status">Lade Modell ...</span>
+  <span id="loader-status">Loading model ...</span>
 </div>
 
 <!-- ── Startseite mit Raumauswahl ──────────────────────────── -->
@@ -138,36 +138,36 @@ body{background:#ffffff;color:#000000;font-family:Arial,Helvetica,sans-serif;fon
 <div id="overlay" class="hidden">
   <h2 id="overlay-title">GLB Walking</h2>
   <div class="controls-hint" id="desktop-hint">
-    <span class="key">W A S D</span><span>Bewegen</span>
-    <span class="key">Maus</span><span>Umsehen</span>
+    <span class="key">W A S D</span><span>Move</span>
+    <span class="key">Mouse</span><span>Look around</span>
     <span class="key">ESC</span><span>Pause</span>
   </div>
   <div class="controls-hint" id="touch-hint" style="display:none">
-    <span class="key">Links</span><span>Joystick bewegen</span>
-    <span class="key">Rechts</span><span>Wischen zum Umsehen</span>
+    <span class="key">Left</span><span>Joystick to move</span>
+    <span class="key">Right</span><span>Swipe to look around</span>
   </div>
   <div class="divider"></div>
   <div class="settings-grid">
-    <label for="brightness-slider">Helligkeit</label>
+    <label for="brightness-slider">Brightness</label>
     <input type="range" id="brightness-slider" min="0.5" max="8" step="0.1" value="3.0" />
     <span id="brightness-value">3.0</span>
 
-    <label for="ibl-strength">IBL St&auml;rke</label>
+    <label for="ibl-strength">IBL Strength</label>
     <input type="range" id="ibl-strength" min="0" max="3" step="0.1" value="0.2" />
     <span id="ibl-strength-value">0.2</span>
 
-    <label for="height-slider">Augenh&ouml;he</label>
+    <label for="height-slider">Eye Height</label>
     <input type="range" id="height-slider" min="0.5" max="2.5" step="0.05" value="1.20" />
     <span id="height-value">1.20 m</span>
 
-    <label for="bg-color">Hintergrund</label>
+    <label for="bg-color">Background</label>
     <input type="color" id="bg-color" value="#ffffff" style="width:50px;height:28px;border:1px solid #bbbbbb;background:none;cursor:pointer;padding:2px" />
     <span></span>
   </div>
   <div class="divider"></div>
   <div class="btn-row">
-    <button class="start-btn" id="start-btn">Betreten</button>
-    <button class="new-file-btn" id="new-file-btn">Neue Datei</button>
+    <button class="start-btn" id="start-btn">Enter</button>
+    <button class="new-file-btn" id="new-file-btn">New File</button>
   </div>
 </div>
 
@@ -341,9 +341,9 @@ const roomGrid      = document.getElementById('room-grid');
 if (isTouch) {
   desktopHint.style.display = 'none';
   touchHint.style.display   = 'grid';
-  infoEl.textContent = 'Links: Joystick  |  Rechts: Umsehen';
+  infoEl.textContent = 'Left: Joystick  |  Right: Look around';
 } else {
-  infoEl.textContent = 'WASD bewegen  |  Maus umsehen  |  ESC pausieren';
+  infoEl.textContent = 'WASD move  |  Mouse look around  |  ESC pause';
 }
 
 // ── Renderer ─────────────────────────────────────────────────────
@@ -839,7 +839,7 @@ function loadRoomByIndex(index) {
   currentBgColor = new THREE.Color(config.bgColor);
   scene.background = currentBgColor;
   
-  loadGLBFromURL(config.file);
+  loadGLBFromURL(config.file, config.name);
 }
 
 // ── Drag & Drop ───────────────────────────────────────────────────
@@ -855,14 +855,14 @@ fileInput.addEventListener('change', e => {
 });
 
 // ── GLB per URL laden ────────────────────────────────────────────
-function loadGLBFromURL(url) {
+function loadGLBFromURL(url, displayName) {
   uploadScreen.classList.add('hidden');
   loaderEl.classList.remove('hidden');
   progressBar.style.width='0%';
-  statusText.textContent='Lade '+url+' ...';
+  statusText.textContent='Loading '+url+' ...';
   gltfLoader.load(url,
-    gltf => { progressBar.style.width='100%'; statusText.textContent='Bereit'; setupModel(gltf,url); },
-    xhr  => { if(xhr.total>0){ const p=(xhr.loaded/xhr.total)*100; progressBar.style.width=p.toFixed(0)+'%'; statusText.textContent='Lade ... '+p.toFixed(0)+' %'; } },
+    gltf => { progressBar.style.width='100%'; statusText.textContent='Ready'; setupModel(gltf,url,displayName); },
+    xhr  => { if(xhr.total>0){ const p=(xhr.loaded/xhr.total)*100; progressBar.style.width=p.toFixed(0)+'%'; statusText.textContent='Loading ... '+p.toFixed(0)+' %'; } },
     ()   => { loaderEl.classList.add('hidden'); uploadScreen.classList.remove('hidden'); }
   );
 }
@@ -872,11 +872,11 @@ function loadGLBFromFile(file) {
   uploadScreen.classList.add('hidden');
   loaderEl.classList.remove('hidden');
   progressBar.style.width='0%';
-  statusText.textContent='Lese Datei ...';
+  statusText.textContent='Reading file ...';
   const reader=new FileReader();
   reader.onprogress=e=>{ if(e.lengthComputable){ const p=(e.loaded/e.total)*50; progressBar.style.width=p.toFixed(0)+'%'; } };
   reader.onload=e=>{
-    statusText.textContent='Verarbeite ...'; progressBar.style.width='60%';
+    statusText.textContent='Processing ...'; progressBar.style.width='60%';
     gltfLoader.parse(e.target.result,'',
       gltf => { progressBar.style.width='100%'; setupModel(gltf,file.name); },
       err  => { console.error(err); loaderEl.classList.add('hidden'); uploadScreen.classList.remove('hidden'); }
@@ -886,7 +886,7 @@ function loadGLBFromFile(file) {
 }
 
 // ── Modell einrichten ────────────────────────────────────────────
-function setupModel(gltf, filename) {
+function setupModel(gltf, filename, displayName) {
   if (currentModel) scene.remove(currentModel);
   collisionMeshes=[];
   const model=currentModel=gltf.scene;
@@ -935,7 +935,7 @@ function setupModel(gltf, filename) {
   controls.getObject().position.set(center.x, lastFloorY + EYE_HEIGHT, center.z);
   roomSpawnCenter.set(center.x, 0, center.z);
 
-  overlayTitle.textContent=filename.replace(/\.glb$/i,'');
+  overlayTitle.textContent = displayName || filename.replace(/\.glb$/i,'');
   loaderEl.classList.add('hidden');
   overlayEl.classList.remove('hidden');
   if (!animRunning){ animRunning=true; animate(); }
