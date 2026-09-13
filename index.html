@@ -85,8 +85,6 @@ body{background:#ffffff;color:#000000;font-family:Arial,Helvetica,sans-serif;fon
 
 /* Pause-Button (Touch) */
 #pause-btn{position:fixed;top:14px;right:16px;z-index:30;display:none;padding:8px 16px;background:rgba(255,255,255,0.85);border:1px solid #bbbbbb;color:#888888;letter-spacing:0.15em;text-transform:uppercase;cursor:pointer;backdrop-filter:blur(4px)}
-#flight-btn{position:fixed;top:14px;left:16px;z-index:30;display:none;padding:8px 16px;background:rgba(255,255,255,0.85);border:1px solid #bbbbbb;color:#888888;letter-spacing:0.15em;text-transform:uppercase;cursor:pointer;backdrop-filter:blur(4px)}
-#flight-btn.active{border-color:#000000;color:#000000}
 
 #info{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);letter-spacing:0.15em;color:#666666;text-transform:uppercase;pointer-events:none;z-index:10}
 
@@ -146,6 +144,7 @@ body{background:#ffffff;color:#000000;font-family:Arial,Helvetica,sans-serif;fon
   <h2 id="overlay-title">GLB Walking</h2>
   <div class="controls-hint" id="desktop-hint">
     <span class="key">W A S D</span><span>Move</span>
+    <span class="key">Space / Shift</span><span>Up / Down</span>
     <span class="key">Mouse</span><span>Look around</span>
     <span class="key">ESC</span><span>Pause</span>
   </div>
@@ -200,7 +199,6 @@ body{background:#ffffff;color:#000000;font-family:Arial,Helvetica,sans-serif;fon
   <button id="fly-down-btn">&#9660;</button>
 </div>
 <button id="pause-btn">&#9776; Pause</button>
-<button id="flight-btn">Walk Mode</button>
 
 <div id="info"></div>
 
@@ -350,7 +348,6 @@ const joyMoveKnob   = document.getElementById('joy-move-knob');
 const joystickTurn  = document.getElementById('joystick-turn');
 const joyTurnKnob   = document.getElementById('joy-turn-knob');
 const pauseBtn      = document.getElementById('pause-btn');
-const flightBtn     = document.getElementById('flight-btn');
 const flightUpDown  = document.getElementById('flight-updown');
 const flyUpBtn      = document.getElementById('fly-up-btn');
 const flyDownBtn    = document.getElementById('fly-down-btn');
@@ -547,7 +544,7 @@ vrDolly.add(controller1);
 const teleportRayGeometry = new THREE.BufferGeometry().setFromPoints([
   new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0, -1)
 ]);
-const teleportRayMaterial = new THREE.LineBasicMaterial({ color: 0xc8b89a, transparent: true, opacity: 0.85 });
+const teleportRayMaterial = new THREE.LineBasicMaterial({ color: 0x000000, transparent: true, opacity: 1.0 });
 function makeTeleportRay() {
   const line = new THREE.Line(teleportRayGeometry, teleportRayMaterial);
   line.visible = false;
@@ -558,7 +555,7 @@ const teleportRay1 = makeTeleportRay(); controller1.add(teleportRay1);
 
 const teleportMarker = new THREE.Mesh(
   new THREE.RingGeometry(0.18, 0.26, 32).rotateX(-Math.PI / 2),
-  new THREE.MeshBasicMaterial({ color: 0xc8b89a, transparent: true, opacity: 0.85, side: THREE.DoubleSide, depthTest: false })
+  new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.9, side: THREE.DoubleSide, depthTest: false })
 );
 teleportMarker.renderOrder = 998;
 teleportMarker.visible = false;
@@ -569,7 +566,7 @@ let teleportTargetValid = false;
 const teleportTarget = new THREE.Vector3();
 const tpRaycaster = new THREE.Raycaster();
 const tpOrigin = new THREE.Vector3(), tpDir = new THREE.Vector3(), tpQuat = new THREE.Quaternion();
-const TELEPORT_MAX_DIST = 15;
+let TELEPORT_MAX_DIST = 15; // wird beim Laden je nach Modellgröße angepasst (siehe setupModel)
 
 function onTeleportSelectStart(event) { activeTeleportController = event.target; }
 function onTeleportSelectEnd() {
@@ -593,13 +590,19 @@ controller0.addEventListener('selectstart', onTeleportSelectStart);
 controller0.addEventListener('selectend', onTeleportSelectEnd);
 controller1.addEventListener('selectstart', onTeleportSelectStart);
 controller1.addEventListener('selectend', onTeleportSelectEnd);
-// Grip-Taste (squeeze) auf beiden Controllern schaltet den Flugmodus um.
-// In VR wird daraus KEINE kontinuierliche Flugbewegung (das würde die
-// Übelkeit-Vermeidung von Teleport/Snap-Turn wieder zunichtemachen) -
-// stattdessen darf man im Flugmodus per Teleport auch erhöhte Flächen
-// anvisieren (Balkone, Dächer, Zwischenebenen), nicht nur den Boden.
-controller0.addEventListener('squeezestart', toggleFlightMode);
-controller1.addEventListener('squeezestart', toggleFlightMode);
+
+// Grip-Taste (squeeze) an einem der Controller beendet die VR-Session.
+// Wichtig: Der normale "EXIT VR"-Button von three.js sitzt im 2D-Overlay
+// der Seite - den sieht man mit aufgesetzter Brille aber gar nicht mehr,
+// da im Headset nur die 3D-Szene gerendert wird. Ohne diese Grip-Bindung
+// gäbe es also von INNERHALB der VR-Erfahrung keine Möglichkeit, VR
+// wieder zu verlassen (nur über das Systemmenü der Brille selbst).
+function exitVR() {
+  const session = renderer.xr.getSession();
+  if (session) session.end();
+}
+controller0.addEventListener('squeezestart', exitVR);
+controller1.addEventListener('squeezestart', exitVR);
 
 function updateTeleportAim() {
   teleportRay0.visible = false;
@@ -618,13 +621,12 @@ function updateTeleportAim() {
   tpRaycaster.set(tpOrigin, tpDir);
   tpRaycaster.far = TELEPORT_MAX_DIST;
   const hits = tpRaycaster.intersectObjects(collisionMeshes, true);
-  // Normalerweise nur nach-oben-zeigende Flächen (Boden) als gültiges
-  // Ziel akzeptieren, damit man nicht versehentlich in eine Wand oder
-  // Decke teleportiert. Im Flugmodus wird das gelockert, damit man auch
-  // erhöhte Punkte (Dach, Balkon, Regal ...) anvisieren kann.
-  const floorHit = flightMode
-    ? hits[0]
-    : hits.find(h => h.face && h.face.normal && h.face.normal.y > 0.6);
+  // In VR gibt es nur Teleport als Fortbewegung - deshalb wird hier
+  // (anders als beim Gehen/Fliegen per WASD am Desktop) direkt jede
+  // getroffene Fläche als gültiges Ziel akzeptiert, nicht nur der Boden.
+  // So kommt man auch ohne separaten "Flugmodus" an erhöhte Punkte wie
+  // Dach, Balkon oder Zwischenebene.
+  const floorHit = hits[0];
 
   rayLine.scale.z = floorHit ? floorHit.distance : TELEPORT_MAX_DIST;
   rayLine.visible = true;
@@ -758,7 +760,6 @@ function showOverlay() {
   overlayEl.classList.remove('hidden');
   crosshair.classList.remove('visible');
   escHint.classList.remove('visible');
-  flightBtn.style.display='none';
   flightUpDown.style.display='none';
   if (isTouch) {
     joystickMove.style.display='none';
@@ -769,8 +770,7 @@ function showOverlay() {
 }
 function hideOverlay() {
   overlayEl.classList.add('hidden');
-  flightBtn.style.display='block';
-  if (flightMode && isTouch) flightUpDown.style.display='flex';
+  if (isTouch) flightUpDown.style.display='flex';
   if (!isTouch) { crosshair.classList.add('visible'); escHint.classList.add('visible'); }
   else {
     joystickMove.style.display='block';
@@ -789,16 +789,9 @@ if (!isTouch) {
   pauseBtn.addEventListener('click',  showOverlay);
 }
 
-// ── Flugmodus (Drohnen-Modus): freie Höhenbewegung, weiterhin mit
-// Kollision an Wänden/Boden/Decke (siehe updateMovement). Umschaltbar
-// per Button, oder am Desktop zusätzlich per "F".
-function toggleFlightMode() {
-  flightMode = !flightMode;
-  flightBtn.textContent = flightMode ? 'Fly Mode' : 'Walk Mode';
-  flightBtn.classList.toggle('active', flightMode);
-  if (isTouch) flightUpDown.style.display = flightMode ? 'flex' : 'none';
-}
-flightBtn.addEventListener('click', toggleFlightMode);
+// ── Freie Höhenbewegung (Leertaste/Shift bzw. Touch-Tasten hoch/runter),
+// weiterhin mit Kollision an Wänden/Boden/Decke (siehe updateMovement).
+// Das ist jetzt der einzige Modus - kein Umschalten mehr nötig.
 if (isTouch) {
   const setUp   = v => e => { e.preventDefault(); keys.up = v; };
   const setDown = v => e => { e.preventDefault(); keys.down = v; };
@@ -819,7 +812,6 @@ newFileBtn.addEventListener('click', () => {
 
 // ── Tastatur (Desktop) ───────────────────────────────────────────
 const keys = {w:false,a:false,s:false,d:false,up:false,down:false};
-let flightMode = false; // Flugmodus: freie Höhenbewegung, aber weiterhin mit Kollision (siehe updateMovement)
 document.addEventListener('keydown', e => {
   if (e.code==='KeyW'||e.code==='ArrowUp')    keys.w=true;
   if (e.code==='KeyA'||e.code==='ArrowLeft')  keys.a=true;
@@ -827,7 +819,6 @@ document.addEventListener('keydown', e => {
   if (e.code==='KeyD'||e.code==='ArrowRight') keys.d=true;
   if (e.code==='Space')       keys.up=true;
   if (e.code==='ShiftLeft'||e.code==='ShiftRight'||e.code==='ControlLeft'||e.code==='ControlRight') keys.down=true;
-  if (e.code==='KeyF') toggleFlightMode();
 });
 document.addEventListener('keyup', e => {
   if (e.code==='KeyW'||e.code==='ArrowUp')    keys.w=false;
@@ -1002,6 +993,12 @@ function setupModel(gltf, filename, displayName) {
   // Bei einer hohen Fabrikhalle reicht eine feste 5m-Reichweite nicht aus,
   // um beim Gehen/Teleportieren zuverlässig den Boden unter sich zu finden.
   FLOOR_SEARCH = Math.max(5.0, (box.max.y - box.min.y) + 5.0);
+
+  // Teleport-Reichweite an die Modellgröße anpassen, sonst kommt man bei
+  // großen Gebäuden (z.B. weit entfernte Dachbalken) mit dem Strahl gar
+  // nicht erst hin, egal wie gut man zielt.
+  const modelDiagonal = box.getSize(new THREE.Vector3()).length();
+  TELEPORT_MAX_DIST = Math.max(30, modelDiagonal * 1.5);
   
   // ── KORREKTUR: Boden anhand der Flächen-Normalen erkennen ──
   // Ray von oben nach unten durch den Spawn-Punkt
@@ -1119,22 +1116,18 @@ function updateMovement(delta){
     if(!isBlocked(px,new THREE.Vector3(moveDir.x,0,0).normalize())) pivot.position.x+=moveDir.x*speed;
     const pz=pivot.position.clone().addScaledVector(new THREE.Vector3(0,0,moveDir.z),WALL_MARGIN+0.01);
     if(!isBlocked(pz,new THREE.Vector3(0,0,moveDir.z).normalize())) pivot.position.z+=moveDir.z*speed;
-    // Im Flugmodus KEIN automatisches Einrasten auf Bodenhöhe - die
-    // Höhe wird dort ausschließlich über Hoch/Runter gesteuert (s.u.).
-    if (!flightMode && collisionMeshes.length>0) pivot.position.y=groundHeight(pivot.position);
   }
 
-  // ── Flugmodus: freie Höhenbewegung (Leertaste/Shift bzw. Touch-Tasten),
-  // weiterhin mit Kollision - man kann also nicht durch Boden/Decke fliegen.
-  if (flightMode) {
-    let vertical = 0;
-    if (keys.up)   vertical += 1;
-    if (keys.down) vertical -= 1;
-    if (vertical !== 0) {
-      const vDir = new THREE.Vector3(0, Math.sign(vertical), 0);
-      const testP = pivot.position.clone().addScaledVector(vDir, WALL_MARGIN+0.01);
-      if (!isBlocked(testP, vDir)) pivot.position.y += vertical*speed;
-    }
+  // Freie Höhenbewegung (Leertaste/Shift bzw. Touch-Tasten hoch/runter),
+  // weiterhin mit Kollision - man kann also nicht durch Boden/Decke fliegen,
+  // aber die Höhe wird nicht mehr automatisch an den Boden angeglichen.
+  let vertical = 0;
+  if (keys.up)   vertical += 1;
+  if (keys.down) vertical -= 1;
+  if (vertical !== 0) {
+    const vDir = new THREE.Vector3(0, Math.sign(vertical), 0);
+    const testP = pivot.position.clone().addScaledVector(vDir, WALL_MARGIN+0.01);
+    if (!isBlocked(testP, vDir)) pivot.position.y += vertical*speed;
   }
 }
 
