@@ -85,6 +85,8 @@ body{background:#ffffff;color:#000000;font-family:Arial,Helvetica,sans-serif;fon
 
 /* Pause-Button (Touch) */
 #pause-btn{position:fixed;top:14px;right:16px;z-index:30;display:none;padding:8px 16px;background:rgba(255,255,255,0.85);border:1px solid #bbbbbb;color:#888888;letter-spacing:0.15em;text-transform:uppercase;cursor:pointer;backdrop-filter:blur(4px)}
+#flight-btn{position:fixed;top:14px;left:16px;z-index:30;display:none;padding:8px 16px;background:rgba(255,255,255,0.85);border:1px solid #bbbbbb;color:#888888;letter-spacing:0.15em;text-transform:uppercase;cursor:pointer;backdrop-filter:blur(4px)}
+#flight-btn.active{border-color:#000000;color:#000000}
 
 #info{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);letter-spacing:0.15em;color:#666666;text-transform:uppercase;pointer-events:none;z-index:10}
 
@@ -126,7 +128,7 @@ body{background:#ffffff;color:#000000;font-family:Arial,Helvetica,sans-serif;fon
 <div id="upload-screen">
   <h1>GLB Walking</h1>
   <p class="subtitle">Choose a room or upload your own file, for PC/mobile/VR</p>
-  <p class="nav-hint">Navigation PC: Walking WASD, Flying F, Space and Shift<br>Mobile: Use the Buttons / VR: Teleportation</p>
+  <p class="nav-hint">Navigation PC: Walking WASD, Flying TAB, Space and Shift<br>Mobile: Use the Buttons / VR: Teleportation</p>
   
   <div class="room-grid" id="room-grid">
     <!-- Räume werden dynamisch aus ROOMS generiert -->
@@ -144,7 +146,8 @@ body{background:#ffffff;color:#000000;font-family:Arial,Helvetica,sans-serif;fon
   <h2 id="overlay-title">GLB Walking</h2>
   <div class="controls-hint" id="desktop-hint">
     <span class="key">W A S D</span><span>Move</span>
-    <span class="key">Space / Shift</span><span>Up / Down</span>
+    <span class="key">TAB</span><span>Walk / Fly</span>
+    <span class="key">Shift / Space</span><span>Up / Down (Fly)</span>
     <span class="key">Mouse</span><span>Look around</span>
     <span class="key">ESC</span><span>Pause</span>
   </div>
@@ -199,6 +202,7 @@ body{background:#ffffff;color:#000000;font-family:Arial,Helvetica,sans-serif;fon
   <button id="fly-down-btn">&#9660;</button>
 </div>
 <button id="pause-btn">&#9776; Pause</button>
+<button id="flight-btn">Walk Mode</button>
 
 <div id="info"></div>
 
@@ -292,7 +296,9 @@ const ROOMS = [
     brightness: 3.0,
     ibl: 0.3,
     eyeHeight: 1.20,
-    bgColor: '#fefefe'
+    bgColor: '#fefefe',
+    mode: 'flying',
+    speed: 6.0
   },
   {
     category: '3D Konstruction',
@@ -301,7 +307,9 @@ const ROOMS = [
     brightness: 3.5,
     ibl: 0.4,
     eyeHeight: 1.20,
-    bgColor: '#f0f0f0'
+    bgColor: '#f0f0f0',
+    mode: 'flying',
+    speed: 12.0
   },
   // ── NEU: 10. Beispiel - Platzhalter, Datei noch als example_10.glb
   // hinzufügen (Kategorie/Name/Lichtwerte nach Bedarf anpassen) ────
@@ -348,6 +356,7 @@ const joyMoveKnob   = document.getElementById('joy-move-knob');
 const joystickTurn  = document.getElementById('joystick-turn');
 const joyTurnKnob   = document.getElementById('joy-turn-knob');
 const pauseBtn      = document.getElementById('pause-btn');
+const flightBtn     = document.getElementById('flight-btn');
 const flightUpDown  = document.getElementById('flight-updown');
 const flyUpBtn      = document.getElementById('fly-up-btn');
 const flyDownBtn    = document.getElementById('fly-down-btn');
@@ -760,6 +769,7 @@ function showOverlay() {
   overlayEl.classList.remove('hidden');
   crosshair.classList.remove('visible');
   escHint.classList.remove('visible');
+  flightBtn.style.display='none';
   flightUpDown.style.display='none';
   if (isTouch) {
     joystickMove.style.display='none';
@@ -770,7 +780,8 @@ function showOverlay() {
 }
 function hideOverlay() {
   overlayEl.classList.add('hidden');
-  if (isTouch) flightUpDown.style.display='flex';
+  flightBtn.style.display='block';
+  if (flightMode && isTouch) flightUpDown.style.display='flex';
   if (!isTouch) { crosshair.classList.add('visible'); escHint.classList.add('visible'); }
   else {
     joystickMove.style.display='block';
@@ -789,9 +800,20 @@ if (!isTouch) {
   pauseBtn.addEventListener('click',  showOverlay);
 }
 
-// ── Freie Höhenbewegung (Leertaste/Shift bzw. Touch-Tasten hoch/runter),
-// weiterhin mit Kollision an Wänden/Boden/Decke (siehe updateMovement).
-// Das ist jetzt der einzige Modus - kein Umschalten mehr nötig.
+// ── Walk/Fly-Umschalter ────────────────────────────────────────────
+// Walking (Standard): horizontale Bewegung, Höhe rastet automatisch auf
+// den Boden ein. Flying: freie Höhenbewegung (Shift hoch/Space runter
+// am Desktop, Touch-Tasten auf dem Handy), weiterhin mit Kollision an
+// Wänden/Boden/Decke (siehe updateMovement). Umschalten per Button oder
+// am Desktop zusätzlich per TAB.
+function setFlightMode(on) {
+  flightMode = on;
+  flightBtn.textContent = flightMode ? 'Fly Mode' : 'Walk Mode';
+  flightBtn.classList.toggle('active', flightMode);
+  if (isTouch) flightUpDown.style.display = flightMode ? 'flex' : 'none';
+}
+function toggleFlightMode() { setFlightMode(!flightMode); }
+flightBtn.addEventListener('click', toggleFlightMode);
 if (isTouch) {
   const setUp   = v => e => { e.preventDefault(); keys.up = v; };
   const setDown = v => e => { e.preventDefault(); keys.down = v; };
@@ -812,21 +834,23 @@ newFileBtn.addEventListener('click', () => {
 
 // ── Tastatur (Desktop) ───────────────────────────────────────────
 const keys = {w:false,a:false,s:false,d:false,up:false,down:false};
+let flightMode = false; // Standard: Walking. Umschalten per TAB oder Button (siehe toggleFlightMode).
 document.addEventListener('keydown', e => {
   if (e.code==='KeyW'||e.code==='ArrowUp')    keys.w=true;
   if (e.code==='KeyA'||e.code==='ArrowLeft')  keys.a=true;
   if (e.code==='KeyS'||e.code==='ArrowDown')  keys.s=true;
   if (e.code==='KeyD'||e.code==='ArrowRight') keys.d=true;
-  if (e.code==='Space')       keys.up=true;
-  if (e.code==='ShiftLeft'||e.code==='ShiftRight'||e.code==='ControlLeft'||e.code==='ControlRight') keys.down=true;
+  if (e.code==='ShiftLeft'||e.code==='ShiftRight') keys.up=true;
+  if (e.code==='Space') keys.down=true;
+  if (e.code==='Tab') { e.preventDefault(); toggleFlightMode(); }
 });
 document.addEventListener('keyup', e => {
   if (e.code==='KeyW'||e.code==='ArrowUp')    keys.w=false;
   if (e.code==='KeyA'||e.code==='ArrowLeft')  keys.a=false;
   if (e.code==='KeyS'||e.code==='ArrowDown')  keys.s=false;
   if (e.code==='KeyD'||e.code==='ArrowRight') keys.d=false;
-  if (e.code==='Space')       keys.up=false;
-  if (e.code==='ShiftLeft'||e.code==='ShiftRight'||e.code==='ControlLeft'||e.code==='ControlRight') keys.down=false;
+  if (e.code==='ShiftLeft'||e.code==='ShiftRight') keys.up=false;
+  if (e.code==='Space') keys.down=false;
 });
 
 // ── Touch-Steuerung ──────────────────────────────────────────────
@@ -916,6 +940,13 @@ function loadRoomByIndex(index) {
   currentBgColor = new THREE.Color(config.bgColor);
   scene.background = currentBgColor;
   
+  // Modus (Standard: walking) und Geschwindigkeit (Standard: 1.0x)
+  setFlightMode((config.mode || 'walking') === 'flying');
+  speedMultiplier = config.speed || 1.0;
+  speedSlider.value = speedMultiplier;
+  speedVal.textContent = speedMultiplier.toFixed(1) + 'x';
+  MOVE_SPEED = BASE_MOVE_SPEED * speedMultiplier;
+  
   loadGLBFromURL(config.file, config.name);
 }
 
@@ -950,6 +981,12 @@ function loadGLBFromFile(file) {
   loaderEl.classList.remove('hidden');
   progressBar.style.width='0%';
   statusText.textContent='Reading file ...';
+  // Kein Voreinstellungs-Objekt für eigene Dateien - Standardwerte setzen
+  setFlightMode(false);
+  speedMultiplier = 1.0;
+  speedSlider.value = 1.0;
+  speedVal.textContent = '1.0x';
+  MOVE_SPEED = BASE_MOVE_SPEED;
   const reader=new FileReader();
   reader.onprogress=e=>{ if(e.lengthComputable){ const p=(e.loaded/e.total)*50; progressBar.style.width=p.toFixed(0)+'%'; } };
   reader.onload=e=>{
@@ -1116,18 +1153,24 @@ function updateMovement(delta){
     if(!isBlocked(px,new THREE.Vector3(moveDir.x,0,0).normalize())) pivot.position.x+=moveDir.x*speed;
     const pz=pivot.position.clone().addScaledVector(new THREE.Vector3(0,0,moveDir.z),WALL_MARGIN+0.01);
     if(!isBlocked(pz,new THREE.Vector3(0,0,moveDir.z).normalize())) pivot.position.z+=moveDir.z*speed;
+    // Walking: Höhe automatisch an den Boden angleichen. Im Flugmodus
+    // NICHT - dort wird die Höhe ausschließlich über Shift/Space (bzw.
+    // die Touch-Tasten) gesteuert (s.u.).
+    if (!flightMode && collisionMeshes.length>0) pivot.position.y=groundHeight(pivot.position);
   }
 
-  // Freie Höhenbewegung (Leertaste/Shift bzw. Touch-Tasten hoch/runter),
-  // weiterhin mit Kollision - man kann also nicht durch Boden/Decke fliegen,
-  // aber die Höhe wird nicht mehr automatisch an den Boden angeglichen.
-  let vertical = 0;
-  if (keys.up)   vertical += 1;
-  if (keys.down) vertical -= 1;
-  if (vertical !== 0) {
-    const vDir = new THREE.Vector3(0, Math.sign(vertical), 0);
-    const testP = pivot.position.clone().addScaledVector(vDir, WALL_MARGIN+0.01);
-    if (!isBlocked(testP, vDir)) pivot.position.y += vertical*speed;
+  // ── Flugmodus: freie Höhenbewegung (Shift hoch/Space runter, bzw.
+  // Touch-Tasten hoch/runter), weiterhin mit Kollision - man kann also
+  // nicht durch Boden/Decke fliegen.
+  if (flightMode) {
+    let vertical = 0;
+    if (keys.up)   vertical += 1;
+    if (keys.down) vertical -= 1;
+    if (vertical !== 0) {
+      const vDir = new THREE.Vector3(0, Math.sign(vertical), 0);
+      const testP = pivot.position.clone().addScaledVector(vDir, WALL_MARGIN+0.01);
+      if (!isBlocked(testP, vDir)) pivot.position.y += vertical*speed;
+    }
   }
 }
 
