@@ -67,26 +67,19 @@ body{background:#ffffff;color:#000000;font-family:Arial,Helvetica,sans-serif;fon
 #esc-hint{position:fixed;top:14px;right:16px;letter-spacing:0.15em;color:#555555;text-transform:uppercase;pointer-events:none;z-index:10;opacity:0;transition:opacity 0.3s ease}
 #esc-hint.visible{opacity:1}
 
-/* Touch-Joystick Bewegung (links) */
-#joystick-move{position:fixed;left:20px;bottom:40px;width:110px;height:110px;z-index:20;display:none}
-#joy-move-base{position:absolute;inset:0;border-radius:50%;border:2px solid rgba(80,140,255,0.5);background:rgba(80,140,255,0.08)}
-#joy-move-knob{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:44px;height:44px;border-radius:50%;background:rgba(80,140,255,0.6);pointer-events:none}
-#joy-move-label{position:absolute;bottom:-22px;left:50%;transform:translateX(-50%);letter-spacing:0.1em;color:rgba(80,140,255,0.6);text-transform:uppercase;white-space:nowrap}
+/* Touch-Balken: links horizontal (links/rechts), rechts vertikal (vor/zurück) */
+.touch-bar{position:fixed;z-index:20;display:none;border-radius:30px;border:2px solid rgba(80,140,255,0.5);background:rgba(80,140,255,0.08)}
+#bar-h{left:16px;bottom:50px;width:min(34vw,170px);height:56px}
+#bar-v{right:16px;bottom:40px;width:56px;height:min(40vh,180px)}
+.bar-knob{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:44px;height:44px;border-radius:50%;background:rgba(80,140,255,0.6);pointer-events:none}
+.bar-label{position:absolute;bottom:-22px;left:50%;transform:translateX(-50%);letter-spacing:0.1em;color:rgba(80,140,255,0.6);text-transform:uppercase;white-space:nowrap;pointer-events:none}
 
-/* Touch-Joystick Drehen (rechts) */
-#joystick-turn{position:fixed;right:20px;bottom:40px;width:110px;height:110px;z-index:20;display:none}
-#joy-turn-base{position:absolute;inset:0;border-radius:50%;border:2px solid rgba(80,140,255,0.5);background:rgba(80,140,255,0.08)}
-#joy-turn-knob{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:44px;height:44px;border-radius:50%;background:rgba(80,140,255,0.6);pointer-events:none}
-#joy-turn-label{position:absolute;bottom:-22px;left:50%;transform:translateX(-50%);letter-spacing:0.1em;color:rgba(80,140,255,0.6);text-transform:uppercase;white-space:nowrap}
-
-/* Touch Hoch/Runter-Tasten (nur im Flugmodus) */
-#flight-updown{position:fixed;left:150px;bottom:40px;z-index:20;display:none;flex-direction:column;gap:10px}
+/* Touch Hoch/Runter-Pfeile (Mitte) */
+#flight-updown{position:fixed;left:50%;transform:translateX(-50%);bottom:40px;z-index:20;display:none;flex-direction:column;gap:10px}
 #flight-updown button{width:52px;height:52px;border-radius:50%;border:2px solid rgba(80,140,255,0.5);background:rgba(80,140,255,0.08);color:rgba(80,140,255,0.9);font-size:1.2rem;line-height:1}
 
 /* Pause-Button (Touch) */
 #pause-btn{position:fixed;top:14px;right:16px;z-index:30;display:none;padding:8px 16px;background:rgba(255,255,255,0.85);border:1px solid #bbbbbb;color:#888888;letter-spacing:0.15em;text-transform:uppercase;cursor:pointer;backdrop-filter:blur(4px)}
-#flight-btn{position:fixed;top:14px;left:16px;z-index:30;display:none;padding:8px 16px;background:rgba(255,255,255,0.85);border:1px solid #bbbbbb;color:#888888;letter-spacing:0.15em;text-transform:uppercase;cursor:pointer;backdrop-filter:blur(4px)}
-#flight-btn.active{border-color:#000000;color:#000000}
 
 #info{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);letter-spacing:0.15em;color:#666666;text-transform:uppercase;pointer-events:none;z-index:10}
 
@@ -128,7 +121,7 @@ body{background:#ffffff;color:#000000;font-family:Arial,Helvetica,sans-serif;fon
 <div id="upload-screen">
   <h1>GLB Walking</h1>
   <p class="subtitle">Choose a room or upload your own file, for PC/mobile/VR</p>
-  <p class="nav-hint">Navigation PC: Walking WASD, Flying TAB, Space and Shift<br>Mobile: Use the Buttons / VR: Teleportation</p>
+  <p class="nav-hint">Navigation PC: Flying WASD, Space = up, AltGr = down, Mouse = look<br>Mobile: Use the Bars and Arrows, touch the screen to look / VR: Teleportation</p>
   
   <div class="room-grid" id="room-grid">
     <!-- Räume werden dynamisch aus ROOMS generiert -->
@@ -146,14 +139,15 @@ body{background:#ffffff;color:#000000;font-family:Arial,Helvetica,sans-serif;fon
   <h2 id="overlay-title">GLB Walking</h2>
   <div class="controls-hint" id="desktop-hint">
     <span class="key">W A S D</span><span>Move</span>
-    <span class="key">TAB</span><span>Walk / Fly</span>
-    <span class="key">Shift / Space</span><span>Up / Down (Fly)</span>
+    <span class="key">Space / AltGr</span><span>Up / Down</span>
     <span class="key">Mouse</span><span>Look around</span>
     <span class="key">ESC</span><span>Pause</span>
   </div>
   <div class="controls-hint" id="touch-hint" style="display:none">
-    <span class="key">Left</span><span>Joystick to move</span>
-    <span class="key">Right</span><span>Swipe to look around</span>
+    <span class="key">Left bar</span><span>Move left / right</span>
+    <span class="key">Right bar</span><span>Move forward / back</span>
+    <span class="key">Arrows</span><span>Up / Down</span>
+    <span class="key">Touch screen</span><span>Look around</span>
   </div>
   <div class="divider"></div>
   <div class="settings-grid">
@@ -188,21 +182,20 @@ body{background:#ffffff;color:#000000;font-family:Arial,Helvetica,sans-serif;fon
 <canvas id="canvas"></canvas>
 <div id="esc-hint">ESC - Pause</div>
 
-<!-- Touch-Joysticks -->
-<div id="joystick-move" style="display:none">
-  <div id="joy-move-base"><div id="joy-move-knob"></div></div>
-  <div id="joy-move-label">forward / back</div>
+<!-- Touch-Steuerung: Balken links/rechts, Pfeile in der Mitte -->
+<div id="bar-h" class="touch-bar" style="display:none">
+  <div id="bar-h-knob" class="bar-knob"></div>
+  <div class="bar-label">left / right</div>
 </div>
-<div id="joystick-turn" style="display:none">
-  <div id="joy-turn-base"><div id="joy-turn-knob"></div></div>
-  <div id="joy-turn-label">turn</div>
+<div id="bar-v" class="touch-bar" style="display:none">
+  <div id="bar-v-knob" class="bar-knob"></div>
+  <div class="bar-label">fwd / back</div>
 </div>
 <div id="flight-updown">
   <button id="fly-up-btn">&#9650;</button>
   <button id="fly-down-btn">&#9660;</button>
 </div>
 <button id="pause-btn">&#9776; Pause</button>
-<button id="flight-btn">Walk Mode</button>
 
 <div id="info"></div>
 
@@ -297,7 +290,6 @@ const ROOMS = [
     ibl: 0.3,
     eyeHeight: 1.20,
     bgColor: '#fefefe',
-    mode: 'flying',
     speed: 6.0
   },
   {
@@ -308,7 +300,6 @@ const ROOMS = [
     ibl: 0.4,
     eyeHeight: 1.20,
     bgColor: '#f0f0f0',
-    mode: 'flying',
     speed: 12.0
   },
   // ── NEU: 10. Beispiel - Platzhalter, Datei noch als example_10.glb
@@ -351,12 +342,11 @@ const speedVal      = document.getElementById('speed-value');
 const bgColor       = document.getElementById('bg-color');
 const iblStrength   = document.getElementById('ibl-strength');
 const iblStrVal     = document.getElementById('ibl-strength-value');
-const joystickMove  = document.getElementById('joystick-move');
-const joyMoveKnob   = document.getElementById('joy-move-knob');
-const joystickTurn  = document.getElementById('joystick-turn');
-const joyTurnKnob   = document.getElementById('joy-turn-knob');
 const pauseBtn      = document.getElementById('pause-btn');
-const flightBtn     = document.getElementById('flight-btn');
+const barH          = document.getElementById('bar-h');
+const barHKnob      = document.getElementById('bar-h-knob');
+const barV          = document.getElementById('bar-v');
+const barVKnob      = document.getElementById('bar-v-knob');
 const flightUpDown  = document.getElementById('flight-updown');
 const flyUpBtn      = document.getElementById('fly-up-btn');
 const flyDownBtn    = document.getElementById('fly-down-btn');
@@ -369,9 +359,9 @@ const roomGrid      = document.getElementById('room-grid');
 if (isTouch) {
   desktopHint.style.display = 'none';
   touchHint.style.display   = 'grid';
-  infoEl.textContent = 'Left: Joystick  |  Right: Look around';
+  infoEl.textContent = 'Bars: move  |  Arrows: up / down  |  Touch screen: look';
 } else {
-  infoEl.textContent = 'WASD move  |  Mouse look around  |  ESC pause';
+  infoEl.textContent = 'WASD move  |  Space / AltGr up / down  |  Mouse look  |  ESC pause';
 }
 
 // ── Renderer ─────────────────────────────────────────────────────
@@ -769,23 +759,21 @@ function showOverlay() {
   overlayEl.classList.remove('hidden');
   crosshair.classList.remove('visible');
   escHint.classList.remove('visible');
-  flightBtn.style.display='none';
   flightUpDown.style.display='none';
   if (isTouch) {
-    joystickMove.style.display='none';
-    joystickTurn.style.display='none';
+    barH.style.display='none';
+    barV.style.display='none';
     pauseBtn.style.display='none';
     touchActive=false;
   }
 }
 function hideOverlay() {
   overlayEl.classList.add('hidden');
-  flightBtn.style.display='block';
-  if (flightMode && isTouch) flightUpDown.style.display='flex';
   if (!isTouch) { crosshair.classList.add('visible'); escHint.classList.add('visible'); }
   else {
-    joystickMove.style.display='block';
-    joystickTurn.style.display='block';
+    flightUpDown.style.display='flex';
+    barH.style.display='block';
+    barV.style.display='block';
     pauseBtn.style.display='block';
     touchActive=true;
   }
@@ -800,20 +788,7 @@ if (!isTouch) {
   pauseBtn.addEventListener('click',  showOverlay);
 }
 
-// ── Walk/Fly-Umschalter ────────────────────────────────────────────
-// Walking (Standard): horizontale Bewegung, Höhe rastet automatisch auf
-// den Boden ein. Flying: freie Höhenbewegung (Shift hoch/Space runter
-// am Desktop, Touch-Tasten auf dem Handy), weiterhin mit Kollision an
-// Wänden/Boden/Decke (siehe updateMovement). Umschalten per Button oder
-// am Desktop zusätzlich per TAB.
-function setFlightMode(on) {
-  flightMode = on;
-  flightBtn.textContent = flightMode ? 'Fly Mode' : 'Walk Mode';
-  flightBtn.classList.toggle('active', flightMode);
-  if (isTouch) flightUpDown.style.display = flightMode ? 'flex' : 'none';
-}
-function toggleFlightMode() { setFlightMode(!flightMode); }
-flightBtn.addEventListener('click', toggleFlightMode);
+// ── Hoch/Runter-Pfeile (Touch): setzen dieselben Flags wie Space/AltGr am Desktop.
 if (isTouch) {
   const setUp   = v => e => { e.preventDefault(); keys.up = v; };
   const setDown = v => e => { e.preventDefault(); keys.down = v; };
@@ -833,72 +808,131 @@ newFileBtn.addEventListener('click', () => {
 });
 
 // ── Tastatur (Desktop) ───────────────────────────────────────────
+// WASD = vor/zurück/seitlich, Space = hoch, AltGr = runter.
+// (AltGr meldet unter Windows zusätzlich ein "ControlLeft" - das wird ignoriert.)
 const keys = {w:false,a:false,s:false,d:false,up:false,down:false};
-let flightMode = false; // Standard: Walking. Umschalten per TAB oder Button (siehe toggleFlightMode).
+const isAltGr = e => e.code==='AltRight' || e.key==='AltGraph';
 document.addEventListener('keydown', e => {
   if (e.code==='KeyW'||e.code==='ArrowUp')    keys.w=true;
   if (e.code==='KeyA'||e.code==='ArrowLeft')  keys.a=true;
   if (e.code==='KeyS'||e.code==='ArrowDown')  keys.s=true;
   if (e.code==='KeyD'||e.code==='ArrowRight') keys.d=true;
-  if (e.code==='ShiftLeft'||e.code==='ShiftRight') keys.up=true;
-  if (e.code==='Space') keys.down=true;
-  if (e.code==='Tab') { e.preventDefault(); toggleFlightMode(); }
+  if (e.code==='Space') { keys.up=true;   if (controls.isLocked) e.preventDefault(); }
+  if (isAltGr(e))       { keys.down=true; e.preventDefault(); } // verhindert Menü-Fokus des Browsers
 });
 document.addEventListener('keyup', e => {
   if (e.code==='KeyW'||e.code==='ArrowUp')    keys.w=false;
   if (e.code==='KeyA'||e.code==='ArrowLeft')  keys.a=false;
   if (e.code==='KeyS'||e.code==='ArrowDown')  keys.s=false;
   if (e.code==='KeyD'||e.code==='ArrowRight') keys.d=false;
-  if (e.code==='ShiftLeft'||e.code==='ShiftRight') keys.up=false;
-  if (e.code==='Space') keys.down=false;
+  if (e.code==='Space') keys.up=false;
+  if (isAltGr(e))       keys.down=false;
+});
+// Tasten loslassen, wenn das Fenster den Fokus verliert (sonst "hängen" Tasten fest)
+window.addEventListener('blur', () => { for (const k in keys) keys[k]=false; });
+
+// Zeitpunkt der letzten Blickbewegung (Maus) - siehe Auto-Ausrichtung
+let lastLookTime = 0;
+document.addEventListener('mousemove', e => {
+  if (controls.isLocked && (e.movementX || e.movementY)) lastLookTime = performance.now();
 });
 
 // ── Touch-Steuerung ──────────────────────────────────────────────
-const JOY_RADIUS = 38;
-const move = { id:null, x:0, y:0 };
-const turn = { id:null, x:0 };
+// Links: horizontaler Balken (links/rechts), rechts: vertikaler Balken
+// (vor/zurück), Mitte: Pfeile hoch/runter, Blick: Wischen auf dem Bildschirm.
+const KNOB_SIZE = 44;
+const strafeBar = { id:null, v:0 };   // -1 = links ... +1 = rechts
+const fwdBar    = { id:null, v:0 };   // -1 = oben (vorwärts) ... +1 = unten (zurück)
 
-function joystickHandler(el, knob, store, onlyY) {
-  const getCenter = () => { const r=el.getBoundingClientRect(); return {x:r.left+r.width/2, y:r.top+r.height/2}; };
-
+function barHandler(el, knob, store, axis) {
+  const update = t => {
+    const r = el.getBoundingClientRect();
+    const len    = axis==='x' ? r.width : r.height;
+    const center = axis==='x' ? r.left + r.width/2 : r.top + r.height/2;
+    const pos    = axis==='x' ? t.clientX : t.clientY;
+    const travel = Math.max(1, (len - KNOB_SIZE) / 2);
+    const d = Math.max(-travel, Math.min(travel, pos - center));
+    store.v = d / travel;
+    knob.style.transform = axis==='x'
+      ? `translate(calc(-50% + ${d}px), -50%)`
+      : `translate(-50%, calc(-50% + ${d}px))`;
+  };
   el.addEventListener('touchstart', e => {
     e.preventDefault();
     if (store.id !== null) return;
     const t = e.changedTouches[0];
     store.id = t.identifier;
-    store.x  = 0; store.y = 0;
+    update(t);
   }, {passive:false});
-
   el.addEventListener('touchmove', e => {
     e.preventDefault();
-    for (const t of e.changedTouches) {
-      if (t.identifier !== store.id) continue;
-      const c  = getCenter();
-      let dx   = t.clientX - c.x;
-      let dy   = t.clientY - c.y;
-      const len = Math.sqrt(dx*dx + dy*dy);
-      if (len > JOY_RADIUS) { dx=dx/len*JOY_RADIUS; dy=dy/len*JOY_RADIUS; }
-      store.x = onlyY ? 0 : dx / JOY_RADIUS;
-      store.y = dy / JOY_RADIUS;
-      knob.style.transform = onlyY
-        ? `translate(-50%, calc(-50% + ${dy}px))`
-        : `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
-    }
+    for (const t of e.changedTouches) if (t.identifier === store.id) update(t);
   }, {passive:false});
-
   const end = e => {
     for (const t of e.changedTouches) {
       if (t.identifier !== store.id) continue;
-      store.id=null; store.x=0; store.y=0;
-      knob.style.transform='translate(-50%,-50%)';
+      store.id = null; store.v = 0;
+      knob.style.transform = 'translate(-50%,-50%)';
     }
   };
   el.addEventListener('touchend',    end);
   el.addEventListener('touchcancel', end);
 }
+barHandler(barH, barHKnob, strafeBar, 'x');
+barHandler(barV, barVKnob, fwdBar,    'y');
 
-joystickHandler(joystickMove, joyMoveKnob, move, true);
-joystickHandler(joystickTurn, joyTurnKnob, turn, false);
+// ── Blickrichtung per Touch auf dem Bildschirm ───────────────────
+const MAX_PITCH = Math.PI/2 - 0.05;
+const lookEuler = new THREE.Euler(0, 0, 0, 'YXZ');
+function applyLook(dx, dy) {
+  lookEuler.setFromQuaternion(camera.quaternion);
+  lookEuler.y -= dx * 0.005;
+  lookEuler.x -= dy * 0.005;
+  lookEuler.x = Math.max(-MAX_PITCH, Math.min(MAX_PITCH, lookEuler.x));
+  camera.quaternion.setFromEuler(lookEuler);
+  lastLookTime = performance.now();
+}
+if (isTouch) {
+  const look = { id:null, x:0, y:0 };
+  const isControl = el => el.closest && el.closest('#bar-h,#bar-v,#flight-updown,#pause-btn,#overlay,#upload-screen,#loader');
+  document.addEventListener('touchstart', e => {
+    if (!touchActive || look.id !== null) return;
+    for (const t of e.changedTouches) {
+      if (isControl(t.target)) continue;
+      look.id = t.identifier; look.x = t.clientX; look.y = t.clientY;
+      break;
+    }
+  }, {passive:true});
+  document.addEventListener('touchmove', e => {
+    for (const t of e.changedTouches) {
+      if (t.identifier !== look.id) continue;
+      applyLook(t.clientX - look.x, t.clientY - look.y);
+      look.x = t.clientX; look.y = t.clientY;
+    }
+  }, {passive:true});
+  const endLook = e => { for (const t of e.changedTouches) if (t.identifier === look.id) look.id = null; };
+  document.addEventListener('touchend',    endLook, {passive:true});
+  document.addEventListener('touchcancel', endLook, {passive:true});
+}
+
+// ── Auto-Ausrichtung: bei Bewegung gleitet die Kamera in die Horizontale ──
+// Im Stillstand kann man sich frei umsehen. Sobald man sich länger als
+// LEVEL_DELAY Sekunden ununterbrochen bewegt, gleitet die Neigung sanft
+// auf 0 (Horizont) - dadurch stehen die Fluchten im Bild senkrecht.
+const LEVEL_DELAY = 2.0;   // Sekunden Bewegung bis das Ausgleiten beginnt
+const LEVEL_RATE  = 1.5;   // Gleitgeschwindigkeit (größer = schneller)
+let moveTime = 0;
+function updateAutoLevel(delta, movingNow) {
+  if (!movingNow) { moveTime = 0; return; }
+  moveTime += delta;
+  if (moveTime < LEVEL_DELAY) return;
+  // Während man aktiv den Blick bewegt, nicht dagegen arbeiten
+  if (performance.now() - lastLookTime < 400) return;
+  lookEuler.setFromQuaternion(camera.quaternion);
+  if (Math.abs(lookEuler.x) < 0.0005) return;
+  lookEuler.x *= Math.exp(-LEVEL_RATE * delta);
+  camera.quaternion.setFromEuler(lookEuler);
+}
 
 // ── Räume dynamisch generieren ───────────────────────────────────
 function buildRoomCards() {
@@ -940,8 +974,7 @@ function loadRoomByIndex(index) {
   currentBgColor = new THREE.Color(config.bgColor);
   scene.background = currentBgColor;
   
-  // Modus (Standard: walking) und Geschwindigkeit (Standard: 1.0x)
-  setFlightMode((config.mode || 'walking') === 'flying');
+  // Geschwindigkeit (Standard: 1.0x)
   speedMultiplier = config.speed || 1.0;
   speedSlider.value = speedMultiplier;
   speedVal.textContent = speedMultiplier.toFixed(1) + 'x';
@@ -982,7 +1015,6 @@ function loadGLBFromFile(file) {
   progressBar.style.width='0%';
   statusText.textContent='Reading file ...';
   // Kein Voreinstellungs-Objekt für eigene Dateien - Standardwerte setzen
-  setFlightMode(false);
   speedMultiplier = 1.0;
   speedSlider.value = 1.0;
   speedVal.textContent = '1.0x';
@@ -1132,46 +1164,43 @@ function updateMovement(delta){
   moveDir.set(0,0,0);
 
   if (!isTouch) {
-    if(!controls.isLocked) return;
+    if(!controls.isLocked) { moveTime=0; return; }
     if(keys.w) moveDir.addScaledVector(tmpVec, 1);
     if(keys.s) moveDir.addScaledVector(tmpVec,-1);
     if(keys.a) moveDir.addScaledVector(right, -1);
     if(keys.d) moveDir.addScaledVector(right,  1);
   } else {
-    if (!touchActive) return;
-    if (Math.abs(move.y) > 0.1) moveDir.addScaledVector(tmpVec, -move.y);
-    if (Math.abs(turn.x) > 0.1) {
-      controls.getObject().rotation.y -= turn.x * 0.015;
-    }
+    if (!touchActive) { moveTime=0; return; }
+    // Balken sind analog: halber Ausschlag = halbe Geschwindigkeit
+    if (Math.abs(fwdBar.v)    > 0.1) moveDir.addScaledVector(tmpVec, -fwdBar.v);
+    if (Math.abs(strafeBar.v) > 0.1) moveDir.addScaledVector(right,   strafeBar.v);
+  }
+  const len = moveDir.length();
+  if (len > 1) moveDir.divideScalar(len);
+
+  // Horizontal mit Kollisionsprüfung (X und Z getrennt, damit man an Wänden entlanggleitet)
+  if (Math.abs(moveDir.x) > 1e-4) {
+    const dirX=new THREE.Vector3(Math.sign(moveDir.x),0,0);
+    const px=pivot.position.clone().addScaledVector(dirX,WALL_MARGIN+0.01);
+    if(!isBlocked(px,dirX)) pivot.position.x+=moveDir.x*speed;
+  }
+  if (Math.abs(moveDir.z) > 1e-4) {
+    const dirZ=new THREE.Vector3(0,0,Math.sign(moveDir.z));
+    const pz=pivot.position.clone().addScaledVector(dirZ,WALL_MARGIN+0.01);
+    if(!isBlocked(pz,dirZ)) pivot.position.z+=moveDir.z*speed;
   }
 
-  const isMoving = moveDir.lengthSq() > 0;
-
-  if (isMoving) {
-    moveDir.normalize();
-    const px=pivot.position.clone().addScaledVector(new THREE.Vector3(moveDir.x,0,0),WALL_MARGIN+0.01);
-    if(!isBlocked(px,new THREE.Vector3(moveDir.x,0,0).normalize())) pivot.position.x+=moveDir.x*speed;
-    const pz=pivot.position.clone().addScaledVector(new THREE.Vector3(0,0,moveDir.z),WALL_MARGIN+0.01);
-    if(!isBlocked(pz,new THREE.Vector3(0,0,moveDir.z).normalize())) pivot.position.z+=moveDir.z*speed;
-    // Walking: Höhe automatisch an den Boden angleichen. Im Flugmodus
-    // NICHT - dort wird die Höhe ausschließlich über Shift/Space (bzw.
-    // die Touch-Tasten) gesteuert (s.u.).
-    if (!flightMode && collisionMeshes.length>0) pivot.position.y=groundHeight(pivot.position);
+  // Vertikal (Space hoch / AltGr runter bzw. Touch-Pfeile), ebenfalls mit Kollision
+  let vertical = 0;
+  if (keys.up)   vertical += 1;
+  if (keys.down) vertical -= 1;
+  if (vertical !== 0) {
+    const vDir = new THREE.Vector3(0, vertical, 0);
+    const testP = pivot.position.clone().addScaledVector(vDir, WALL_MARGIN+0.01);
+    if (!isBlocked(testP, vDir)) pivot.position.y += vertical*speed;
   }
 
-  // ── Flugmodus: freie Höhenbewegung (Shift hoch/Space runter, bzw.
-  // Touch-Tasten hoch/runter), weiterhin mit Kollision - man kann also
-  // nicht durch Boden/Decke fliegen.
-  if (flightMode) {
-    let vertical = 0;
-    if (keys.up)   vertical += 1;
-    if (keys.down) vertical -= 1;
-    if (vertical !== 0) {
-      const vDir = new THREE.Vector3(0, Math.sign(vertical), 0);
-      const testP = pivot.position.clone().addScaledVector(vDir, WALL_MARGIN+0.01);
-      if (!isBlocked(testP, vDir)) pivot.position.y += vertical*speed;
-    }
-  }
+  updateAutoLevel(delta, moveDir.lengthSq() > 0 || vertical !== 0);
 }
 
 // ── Render-Loop (WebXR-kompatibel) ───────────────────────────────
