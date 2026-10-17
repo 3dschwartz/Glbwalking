@@ -926,8 +926,6 @@ function updateAutoLevel(delta, movingNow) {
   if (!movingNow) { moveTime = 0; return; }
   moveTime += delta;
   if (moveTime < LEVEL_DELAY) return;
-  // Während man aktiv den Blick bewegt, nicht dagegen arbeiten
-  if (performance.now() - lastLookTime < 400) return;
   lookEuler.setFromQuaternion(camera.quaternion);
   if (Math.abs(lookEuler.x) < 0.0005) return;
   lookEuler.x *= Math.exp(-LEVEL_RATE * delta);
@@ -1120,6 +1118,40 @@ let FLOOR_SEARCH=5.0; // wird beim Laden je nach Gebäudehöhe angepasst (siehe 
 
 function isBlocked(origin,dir){ wallRay.set(origin,dir); wallRay.far=WALL_MARGIN; return wallRay.intersectObjects(collisionMeshes,true).length>0; }
 
+// ── Kollision mit "Sweep" (auch bei hoher Geschwindigkeit sicher) ──────
+// Statt nur kurz vor der Kamera zu prüfen, reicht der Strahl über den
+// GESAMTEN Weg dieses Frames (+ Körperradius). Dadurch kann die Kamera
+// auch bei 12x nicht mehr durch Wände springen. Mehrere Strahlen (Mitte
+// + links/rechts versetzt) bilden die Körperbreite nach. Mit 0.2 m
+// Radius (40 cm breit) passt man durch eine 70 cm breite Tür.
+const PLAYER_RADIUS = 0.2;    // horizontaler Körperradius
+const VERT_CLEARANCE = 0.3;   // Mindestabstand zu Boden/Decke
+const sweepRay = new THREE.Raycaster();
+const swOrigin = new THREE.Vector3();
+const swSide   = new THREE.Vector3();
+
+// Liefert, wie weit man sich von 'pos' entlang 'dir' (Achsrichtung) bewegen
+// darf, maximal 'dist'. 'clearance' ist der einzuhaltende Abstand zur Fläche.
+function sweepAllowed(pos, dir, dist, clearance, vertical) {
+  if (dist <= 0 || collisionMeshes.length === 0) return dist;
+  const reach = dist + clearance;
+  const offsets = vertical
+    ? [[0,0],[PLAYER_RADIUS,0],[-PLAYER_RADIUS,0],[0,PLAYER_RADIUS],[0,-PLAYER_RADIUS]]
+    : [[0,0],[PLAYER_RADIUS,0],[-PLAYER_RADIUS,0]];
+  if (!vertical) swSide.set(-dir.z, 0, dir.x);   // seitlich zur Bewegungsrichtung
+  let nearest = Infinity;
+  for (const [a,b] of offsets) {
+    if (vertical) swOrigin.set(pos.x + a, pos.y, pos.z + b);
+    else          swOrigin.copy(pos).addScaledVector(swSide, a);
+    sweepRay.set(swOrigin, dir);
+    sweepRay.near = 0; sweepRay.far = reach;
+    const hits = sweepRay.intersectObjects(collisionMeshes, true);
+    if (hits.length && hits[0].distance < nearest) nearest = hits[0].distance;
+  }
+  if (nearest === Infinity) return dist;
+  return Math.max(0, Math.min(dist, nearest - clearance));
+}
+
 function groundHeight(pos){
   floorRay.set(new THREE.Vector3(pos.x,pos.y-0.05,pos.z),DOWN); floorRay.far=FLOOR_SEARCH;
   const hits=floorRay.intersectObjects(collisionMeshes,true);
@@ -1178,26 +1210,31 @@ function updateMovement(delta){
   const len = moveDir.length();
   if (len > 1) moveDir.divideScalar(len);
 
-  // Horizontal mit Kollisionsprüfung (X und Z getrennt, damit man an Wänden entlanggleitet)
-  if (Math.abs(moveDir.x) > 1e-4) {
-    const dirX=new THREE.Vector3(Math.sign(moveDir.x),0,0);
-    const px=pivot.position.clone().addScaledVector(dirX,WALL_MARGIN+0.01);
-    if(!isBlocked(px,dirX)) pivot.position.x+=moveDir.x*speed;
+  // Horizontal: X und Z getrennt (so gleitet man an Wänden entlang),
+  // jeweils mit Sweep über den ganzen Frame-Weg.
+  const dt = Math.min(delta, 0.1);   // Frame-Spitzen (z.B. Tab-Wechsel) begrenzen
+  const stepX = moveDir.x * MOVE_SPEED * dt;
+  const stepZ = moveDir.z * MOVE_SPEED * dt;
+  let movedH = false;
+  if (Math.abs(stepX) > 1e-6) {
+    const dirX = new THREE.Vector3(Math.sign(stepX), 0, 0);
+    const a = sweepAllowed(pivot.position, dirX, Math.abs(stepX), PLAYER_RADIUS, false);
+    pivot.position.x += dirX.x * a;
   }
-  if (Math.abs(moveDir.z) > 1e-4) {
-    const dirZ=new THREE.Vector3(0,0,Math.sign(moveDir.z));
-    const pz=pivot.position.clone().addScaledVector(dirZ,WALL_MARGIN+0.01);
-    if(!isBlocked(pz,dirZ)) pivot.position.z+=moveDir.z*speed;
+  if (Math.abs(stepZ) > 1e-6) {
+    const dirZ = new THREE.Vector3(0, 0, Math.sign(stepZ));
+    const a = sweepAllowed(pivot.position, dirZ, Math.abs(stepZ), PLAYER_RADIUS, false);
+    pivot.position.z += dirZ.z * a;
   }
 
-  // Vertikal (Space hoch / AltGr runter bzw. Touch-Pfeile), ebenfalls mit Kollision
+  // Vertikal (Space hoch / AltGr runter bzw. Touch-Pfeile), ebenfalls Sweep
   let vertical = 0;
   if (keys.up)   vertical += 1;
   if (keys.down) vertical -= 1;
   if (vertical !== 0) {
     const vDir = new THREE.Vector3(0, vertical, 0);
-    const testP = pivot.position.clone().addScaledVector(vDir, WALL_MARGIN+0.01);
-    if (!isBlocked(testP, vDir)) pivot.position.y += vertical*speed;
+    const a = sweepAllowed(pivot.position, vDir, MOVE_SPEED * dt, VERT_CLEARANCE, true);
+    pivot.position.y += vertical * a;
   }
 
   updateAutoLevel(delta, moveDir.lengthSq() > 0 || vertical !== 0);
