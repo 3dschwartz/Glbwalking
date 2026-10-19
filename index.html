@@ -519,10 +519,45 @@ function setLightMultiplier(m) {
   lightVal.textContent = m.toFixed(2) + 'x';
   applyLightStrength();
 }
+const MAX_SHADOW_LIGHTS = 6;   // Schatten sind teuer (Punktlichter rendern 6x) - mehr Lichter bekommen keinen Schatten
+function setupLightShadow(l, center, diag, mapSize) {
+  l.castShadow = true;
+  const sh = l.shadow;
+  sh.mapSize.set(mapSize, mapSize);
+  sh.camera.near = 0.1;
+  sh.camera.far  = Math.max(10, diag * 1.3);
+  sh.bias = -0.0005;
+  sh.normalBias = 0.03;
+  if (l.isDirectionalLight) {
+    // Sonnenlicht: Position egal fürs Licht, aber die Schatten-Kamera sitzt
+    // dort. Daher vor das Modell setzen (gleiche Richtung) und den
+    // Ausschnitt so wählen, dass das ganze Modell darin liegt.
+    const wp = new THREE.Vector3(), tp = new THREE.Vector3();
+    l.getWorldPosition(wp); l.target.getWorldPosition(tp);
+    const dir = tp.sub(wp).normalize();
+    const newW = center.clone().addScaledVector(dir, -diag * 0.6);
+    if (l.parent) l.parent.worldToLocal(newW);
+    l.position.copy(newW);
+    l.updateMatrixWorld(true);
+    const r = diag * 0.6;
+    sh.camera.left = -r; sh.camera.right = r; sh.camera.top = r; sh.camera.bottom = -r;
+    sh.camera.far = diag * 1.3;
+    sh.camera.updateProjectionMatrix();
+  }
+}
 function collectModelLights(model) {
   modelLights = [];
+  model.updateMatrixWorld(true);
   model.traverse(c => {
     if (c.isLight) { c.userData.baseIntensity = c.intensity; modelLights.push(c); }
+  });
+  // Schatten für die Lichter aus der Datei
+  const lbox = new THREE.Box3().setFromObject(model);
+  const lcenter = lbox.getCenter(new THREE.Vector3());
+  const ldiag = lbox.getSize(new THREE.Vector3()).length();
+  modelLights.slice(0, MAX_SHADOW_LIGHTS).forEach(l => {
+    const size = l.isPointLight ? 1024 : 2048;
+    setupLightShadow(l, lcenter, ldiag, size);
   });
   const has = modelLights.length > 0;
   ambientLight.visible = !has;
@@ -1125,6 +1160,10 @@ function setupModel(gltf, filename, displayName) {
     mixer = new THREE.AnimationMixer(model);
     gltf.animations.forEach(clip => mixer.clipAction(clip).play());
   }
+  // Statische Szene: Schatten nur einmal berechnen (spart viel Leistung).
+  // Mit Animationen werden sie weiterhin jedes Frame aktualisiert.
+  renderer.shadowMap.autoUpdate = !!mixer;
+  renderer.shadowMap.needsUpdate = true;
 
   const box=new THREE.Box3().setFromObject(model);
   // Spawn-Punkt ist jetzt der Modell-Nullpunkt (0,0), NICHT das
