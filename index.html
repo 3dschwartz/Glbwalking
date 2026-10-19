@@ -175,6 +175,10 @@ body{background:#ffffff;color:#000000;font-family:Arial,Helvetica,sans-serif;fon
     <input type="range" id="speed-slider" min="0.5" max="12" step="0.1" value="1.0" />
     <span id="speed-value">1.0x</span>
 
+    <label for="light-slider">Light Strength</label>
+    <input type="range" id="light-slider" min="-2" max="2" step="0.05" value="0" />
+    <span id="light-value">1.00x</span>
+
     <label for="bg-color">Background</label>
     <input type="color" id="bg-color" value="#ffffff" style="width:50px;height:28px;border:1px solid #bbbbbb;background:none;cursor:pointer;padding:2px" />
     <span></span>
@@ -351,6 +355,8 @@ const hSlider       = document.getElementById('height-slider');
 const hVal          = document.getElementById('height-value');
 const speedSlider   = document.getElementById('speed-slider');
 const speedVal      = document.getElementById('speed-value');
+const lightSlider   = document.getElementById('light-slider');
+const lightVal      = document.getElementById('light-value');
 const bgColor       = document.getElementById('bg-color');
 const iblStrength   = document.getElementById('ibl-strength');
 const iblStrVal     = document.getElementById('ibl-strength-value');
@@ -493,6 +499,38 @@ dirLight.shadow.camera.near = 0.1; dirLight.shadow.camera.far = 20;
 dirLight.shadow.camera.left = dirLight.shadow.camera.bottom = -8;
 dirLight.shadow.camera.right = dirLight.shadow.camera.top = 8;
 scene.add(dirLight);
+
+// ── Lichter aus der GLB-Datei ────────────────────────────────────
+// GLTFLoader legt Lichter aus der Datei (KHR_lights_punctual: Punkt-,
+// Spot-, Sonnenlicht, z.B. aus Blender) automatisch in der Szene an.
+// Enthält die GLB Lichter, werden NUR diese benutzt und die eingebauten
+// Standardlichter (ambientLight/dirLight) abgeschaltet. Enthält sie
+// keine, bleiben die Standardlichter als Rückfall aktiv, damit die
+// Szene nicht schwarz wird. Der Light-Strength-Regler ist ein
+// Multiplikator (logarithmisch, 0.01x - 100x) auf die Original-Stärke.
+let modelLights = [];
+let lightMultiplier = 1.0;
+function applyLightStrength() {
+  for (const l of modelLights) l.intensity = l.userData.baseIntensity * lightMultiplier;
+}
+function setLightMultiplier(m) {
+  lightMultiplier = m;
+  lightSlider.value = Math.log10(m);
+  lightVal.textContent = m.toFixed(2) + 'x';
+  applyLightStrength();
+}
+function collectModelLights(model) {
+  modelLights = [];
+  model.traverse(c => {
+    if (c.isLight) { c.userData.baseIntensity = c.intensity; modelLights.push(c); }
+  });
+  const has = modelLights.length > 0;
+  ambientLight.visible = !has;
+  dirLight.visible     = !has;
+  lightSlider.disabled = !has;
+  lightVal.textContent = has ? lightMultiplier.toFixed(2) + 'x' : 'none in file';
+  applyLightStrength();
+}
 
 // ── IBL ──────────────────────────────────────────────────────────
 const pmrem = new THREE.PMREMGenerator(renderer);
@@ -755,6 +793,11 @@ hSlider.addEventListener('input', () => {
   hVal.textContent = v.toFixed(2) + ' m';
   controls.getObject().position.y = lastFloorY + EYE_HEIGHT;
 });
+lightSlider.addEventListener('input', () => {
+  lightMultiplier = Math.pow(10, parseFloat(lightSlider.value));
+  lightVal.textContent = lightMultiplier.toFixed(2) + 'x';
+  applyLightStrength();
+});
 speedSlider.addEventListener('input', () => {
   speedMultiplier = parseFloat(speedSlider.value);
   speedVal.textContent = speedMultiplier.toFixed(1) + 'x';
@@ -1005,6 +1048,7 @@ function loadRoomByIndex(index) {
   setFlightMode((config.mode || 'walking') === 'flying');
   // Geschwindigkeit (Standard: 1.0x)
   speedMultiplier = config.speed || 1.0;
+  setLightMultiplier(config.light || 1.0);
   speedSlider.value = speedMultiplier;
   speedVal.textContent = speedMultiplier.toFixed(1) + 'x';
   MOVE_SPEED = BASE_MOVE_SPEED * speedMultiplier;
@@ -1046,6 +1090,7 @@ function loadGLBFromFile(file) {
   // Kein Voreinstellungs-Objekt für eigene Dateien - Standardwerte setzen
   setFlightMode(false);
   speedMultiplier = 1.0;
+  setLightMultiplier(1.0);
   speedSlider.value = 1.0;
   speedVal.textContent = '1.0x';
   MOVE_SPEED = BASE_MOVE_SPEED;
@@ -1068,6 +1113,7 @@ function setupModel(gltf, filename, displayName) {
   const model=currentModel=gltf.scene;
   model.traverse(c=>{ if(c.isMesh){ c.castShadow=c.receiveShadow=true; collisionMeshes.push(c); } });
   scene.add(model);
+  collectModelLights(model);
 
   // ── Animationen ─────────────────────────────────────────────────
   // GLB kann eingebettete Animationen enthalten (Objekt-/Skelett-
