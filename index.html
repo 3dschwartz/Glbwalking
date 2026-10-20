@@ -79,6 +79,7 @@ body{background:#ffffff;color:#000000;font-family:Arial,Helvetica,sans-serif;fon
 #flight-updown button{width:52px;height:52px;border-radius:50%;border:2px solid rgba(80,140,255,0.5);background:rgba(80,140,255,0.08);color:rgba(80,140,255,0.9);font-size:1.2rem;line-height:1}
 
 /* Pause-Button (Touch) */
+#fps{position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:30;display:none;padding:4px 10px;background:rgba(255,255,255,0.85);border:1px solid #bbbbbb;color:#000000;letter-spacing:0.1em;pointer-events:none}
 #flight-btn{position:fixed;top:14px;left:16px;z-index:30;display:none;padding:8px 16px;background:rgba(255,255,255,0.85);border:1px solid #bbbbbb;color:#888888;letter-spacing:0.15em;text-transform:uppercase;cursor:pointer;backdrop-filter:blur(4px)}
 #flight-btn.active{border-color:#000000;color:#000000}
 /* Level-Taste (Touch): über dem horizontalen Balken */
@@ -211,13 +212,15 @@ body{background:#ffffff;color:#000000;font-family:Arial,Helvetica,sans-serif;fon
 <button id="pause-btn">&#9776; Pause</button>
 <button id="flight-btn">Walk Mode</button>
 
+<div id="fps">-- FPS</div>
 <div id="info"></div>
 
 <script type="importmap">
 {
   "imports": {
     "three": "https://cdn.jsdelivr.net/npm/three@0.167.1/build/three.module.js",
-    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.167.1/examples/jsm/"
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.167.1/examples/jsm/",
+    "three-mesh-bvh": "https://cdn.jsdelivr.net/npm/three-mesh-bvh@0.7.8/build/index.module.js"
   }
 }
 </script>
@@ -228,6 +231,14 @@ import { GLTFLoader }          from 'three/addons/loaders/GLTFLoader.js';
 import { DRACOLoader }         from 'three/addons/loaders/DRACOLoader.js';
 import { PointerLockControls } from 'three/addons/controls/PointerLockControls.js';
 import { VRButton }            from 'three/addons/webxr/VRButton.js';
+import { computeBoundsTree, disposeBoundsTree, acceleratedRaycast } from 'three-mesh-bvh';
+
+// Beschleunigte Raycasts (BVH): Ohne BVH prüft jeder Strahl ALLE Dreiecke
+// eines Meshes - bei großen Scans (Hunderttausende Dreiecke) sind das
+// zig Millisekunden pro Strahl. Mit BVH sind es Bruchteile einer Millisekunde.
+THREE.BufferGeometry.prototype.computeBoundsTree = computeBoundsTree;
+THREE.BufferGeometry.prototype.disposeBoundsTree = disposeBoundsTree;
+THREE.Mesh.prototype.raycast = acceleratedRaycast;
 
 // ═══════════════════════════════════════════════════════════════════
 // ═══ KONFIGURATION: Beispielräume mit individuellen Voreinstellungen
@@ -362,6 +373,7 @@ const iblStrength   = document.getElementById('ibl-strength');
 const iblStrVal     = document.getElementById('ibl-strength-value');
 const pauseBtn      = document.getElementById('pause-btn');
 const flightBtn     = document.getElementById('flight-btn');
+const fpsEl         = document.getElementById('fps');
 const levelBtn      = document.getElementById('level-btn');
 const barH          = document.getElementById('bar-h');
 const barHKnob      = document.getElementById('bar-h-knob');
@@ -508,6 +520,7 @@ scene.add(dirLight);
 // keine, bleiben die Standardlichter als Rückfall aktiv, damit die
 // Szene nicht schwarz wird. Der Light-Strength-Regler ist ein
 // Multiplikator (logarithmisch, 0.01x - 100x) auf die Original-Stärke.
+const FALLBACK_LIGHTS = true;   // false = auch ohne Lichter in der GLB KEINE Standardlichter
 let modelLights = [];
 let lightMultiplier = 1.0;
 function applyLightStrength() {
@@ -560,8 +573,8 @@ function collectModelLights(model) {
     setupLightShadow(l, lcenter, ldiag, size);
   });
   const has = modelLights.length > 0;
-  ambientLight.visible = !has;
-  dirLight.visible     = !has;
+  ambientLight.visible = !has && FALLBACK_LIGHTS;
+  dirLight.visible     = !has && FALLBACK_LIGHTS;
   lightSlider.disabled = !has;
   lightVal.textContent = has ? lightMultiplier.toFixed(2) + 'x' : 'none in file';
   applyLightStrength();
@@ -651,6 +664,7 @@ let activeTeleportController = null;
 let teleportTargetValid = false;
 const teleportTarget = new THREE.Vector3();
 const tpRaycaster = new THREE.Raycaster();
+tpRaycaster.firstHitOnly = true;
 const tpOrigin = new THREE.Vector3(), tpDir = new THREE.Vector3(), tpQuat = new THREE.Quaternion();
 let TELEPORT_MAX_DIST = 15; // wird beim Laden je nach Modellgröße angepasst (siehe setupModel)
 
@@ -852,6 +866,7 @@ function showOverlay() {
   crosshair.classList.remove('visible');
   escHint.classList.remove('visible');
   flightBtn.style.display='none';
+  fpsEl.style.display='none';
   flightUpDown.style.display='none';
   levelBtn.style.display='none';
   if (isTouch) {
@@ -864,6 +879,7 @@ function showOverlay() {
 function hideOverlay() {
   overlayEl.classList.add('hidden');
   flightBtn.style.display='block';
+  fpsEl.style.display='block';
   if (!isTouch) { crosshair.classList.add('visible'); escHint.classList.add('visible'); }
   else {
     if (flightMode) flightUpDown.style.display='flex';
@@ -1142,12 +1158,31 @@ function loadGLBFromFile(file) {
 }
 
 // ── Modell einrichten ────────────────────────────────────────────
+let bvhToken = 0;
+function buildBVHProgressively(meshes) {
+  const token = ++bvhToken;               // neues Modell -> alter Aufbau bricht ab
+  const queue = meshes.filter(m => {
+    const g = m.geometry;
+    if (!g || g.boundsTree || m.isSkinnedMesh || m.isInstancedMesh) return false;
+    const tris = (g.index ? g.index.count : g.attributes.position.count) / 3;
+    return tris > 2000;                    // kleine Meshes brauchen keinen BVH
+  });
+  let i = 0;
+  const step = () => {
+    if (token !== bvhToken || i >= queue.length) return;
+    try { queue[i++].geometry.computeBoundsTree({ maxLeafTris: 10 }); }
+    catch (err) { console.warn('BVH-Aufbau fehlgeschlagen', err); }
+    setTimeout(step, 0);                   // dazwischen darf die Seite zeichnen
+  };
+  setTimeout(step, 0);
+}
 function setupModel(gltf, filename, displayName) {
   if (currentModel) scene.remove(currentModel);
   collisionMeshes=[];
   const model=currentModel=gltf.scene;
   model.traverse(c=>{ if(c.isMesh){ c.castShadow=c.receiveShadow=true; collisionMeshes.push(c); } });
   scene.add(model);
+  buildBVHProgressively(collisionMeshes);
   collectModelLights(model);
 
   // ── Animationen ─────────────────────────────────────────────────
@@ -1244,6 +1279,7 @@ function isBlocked(origin,dir){ wallRay.set(origin,dir); wallRay.far=WALL_MARGIN
 const PLAYER_RADIUS = 0.11;   // horizontaler Körperradius: Fußball-Durchmesser ca. 22 cm
 const VERT_CLEARANCE = 0.3;   // Mindestabstand zu Boden/Decke
 const sweepRay = new THREE.Raycaster();
+sweepRay.firstHitOnly = true;
 const swOrigin = new THREE.Vector3();
 const swSide   = new THREE.Vector3();
 
@@ -1305,6 +1341,49 @@ function vrGroundHeight(pos){
 // ── Bewegungs-Update ─────────────────────────────────────────────
 const tmpVec=new THREE.Vector3(), moveDir=new THREE.Vector3();
 
+// ── Horizontale Bewegung mit "Collide & Slide" ───────────────────
+// Strahlen laufen in der TATSÄCHLICHEN Bewegungsrichtung (Mitte + links/
+// rechts versetzt = Körperbreite). Mit der Flächennormale wird der Abstand
+// zur Wand exakt auf PLAYER_RADIUS gehalten und der Rest der Bewegung an
+// der Wand entlanggeleitet. Dadurch funktionieren auch schräge Türen und
+// Ecken, und im freien Raum sind es nur 3 Strahlen pro Frame.
+const csMoveTmp = new THREE.Vector3();
+const csDir = new THREE.Vector3(), csSide = new THREE.Vector3(), csRem = new THREE.Vector3();
+const csOrg = new THREE.Vector3(), csN = new THREE.Vector3(), csBest = new THREE.Vector3();
+const CS_OFFSETS = [0, PLAYER_RADIUS, -PLAYER_RADIUS];
+function moveHorizontal(pos, move) {
+  csRem.copy(move); csRem.y = 0;
+  for (let iter = 0; iter < 3; iter++) {
+    const dist = csRem.length();
+    if (dist < 1e-6) return;
+    csDir.copy(csRem).divideScalar(dist);
+    if (collisionMeshes.length === 0) { pos.addScaledVector(csDir, dist); return; }
+    csSide.set(-csDir.z, 0, csDir.x);
+    let allowedMin = dist, hitFound = false;
+    for (const off of CS_OFFSETS) {
+      csOrg.copy(pos).addScaledVector(csSide, off);
+      sweepRay.set(csOrg, csDir);
+      sweepRay.near = 0; sweepRay.far = dist + PLAYER_RADIUS * 4;
+      const hits = sweepRay.intersectObjects(collisionMeshes, true);
+      if (!hits.length) continue;
+      const h = hits[0];
+      // Normale in Weltkoordinaten, nur horizontal, der Bewegung zugewandt
+      csN.copy(h.face.normal).transformDirection(h.object.matrixWorld);
+      csN.y = 0;
+      if (csN.lengthSq() < 1e-6) csN.copy(csDir).negate(); else csN.normalize();
+      if (csN.dot(csDir) > 0) csN.negate();
+      const facing = Math.max(0.25, -csN.dot(csDir));
+      const allowed = Math.max(0, Math.min(dist, h.distance - PLAYER_RADIUS / facing));
+      if (allowed < allowedMin) { allowedMin = allowed; csBest.copy(csN); hitFound = true; }
+    }
+    pos.addScaledVector(csDir, allowedMin);
+    if (!hitFound) return;
+    // Rest der Bewegung an der Wand entlang
+    csRem.copy(csDir).multiplyScalar(dist - allowedMin);
+    csRem.addScaledVector(csBest, -csRem.dot(csBest));
+  }
+}
+
 function updateMovement(delta){
   updateLevel(delta);
   const pivot=controls.getObject();
@@ -1328,21 +1407,11 @@ function updateMovement(delta){
   const len = moveDir.length();
   if (len > 1) moveDir.divideScalar(len);
 
-  // Horizontal: X und Z getrennt (so gleitet man an Wänden entlang),
-  // jeweils mit Sweep über den ganzen Frame-Weg.
+  // Horizontal: Collide & Slide über den ganzen Weg dieses Frames
   const dt = Math.min(delta, 0.1);   // Frame-Spitzen (z.B. Tab-Wechsel) begrenzen
-  const stepX = moveDir.x * MOVE_SPEED * dt;
-  const stepZ = moveDir.z * MOVE_SPEED * dt;
-  if (Math.abs(stepX) > 1e-6) {
-    const dirX = new THREE.Vector3(Math.sign(stepX), 0, 0);
-    const a = sweepAllowed(pivot.position, dirX, Math.abs(stepX), PLAYER_RADIUS, false);
-    pivot.position.x += dirX.x * a;
-  }
-  if (Math.abs(stepZ) > 1e-6) {
-    const dirZ = new THREE.Vector3(0, 0, Math.sign(stepZ));
-    const a = sweepAllowed(pivot.position, dirZ, Math.abs(stepZ), PLAYER_RADIUS, false);
-    pivot.position.z += dirZ.z * a;
-  }
+  const hMove = csMoveTmp.set(moveDir.x * MOVE_SPEED * dt, 0, moveDir.z * MOVE_SPEED * dt);
+  const moved = hMove.lengthSq() > 1e-12;
+  if (moved) moveHorizontal(pivot.position, hMove);
 
   if (flightMode) {
     // Flying: freie Höhe (Space hoch / AltGr runter bzw. Touch-Pfeile), mit Sweep
@@ -1357,7 +1426,6 @@ function updateMovement(delta){
   } else {
     // Walking: Höhe folgt dem Boden (so kann man Treppen hochlaufen).
     // Nach dem Umschalten von Flying noch ein paar Frames nachführen ("Landen").
-    const moved = Math.abs(stepX) > 1e-6 || Math.abs(stepZ) > 1e-6;
     if (collisionMeshes.length > 0 && (moved || groundSettle > 0)) {
       pivot.position.y = groundHeight(pivot.position);
       if (groundSettle > 0) groundSettle--;
@@ -1367,11 +1435,22 @@ function updateMovement(delta){
 
 // ── Render-Loop (WebXR-kompatibel) ───────────────────────────────
 const clock=new THREE.Clock();
+// ── FPS-Anzeige: Mittelwert über je 0,5 Sekunden ─────────────────
+let fpsFrames = 0, fpsLast = performance.now();
+function updateFps() {
+  fpsFrames++;
+  const now = performance.now();
+  if (now - fpsLast >= 500) {
+    fpsEl.textContent = Math.round(fpsFrames * 1000 / (now - fpsLast)) + ' FPS';
+    fpsFrames = 0; fpsLast = now;
+  }
+}
 function animate(){
   renderer.setAnimationLoop(() => {
     const delta = clock.getDelta();
     
     if (mixer) mixer.update(delta);
+    updateFps();
     
     if (renderer.xr.isPresenting) {
       updateVRMovement(delta);
