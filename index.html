@@ -10,7 +10,7 @@ body{background:#ffffff;color:#000000;font-family:Arial,Helvetica,sans-serif;fon
 
 #loader{position:fixed;inset:0;background:#ffffff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:24px;z-index:100;transition:opacity 0.6s ease}
 #loader.hidden{opacity:0;pointer-events:none}
-#loader h1{font-weight:400;letter-spacing:0.3em;text-transform:uppercase;color:#000000}
+#loader h1{font-weight:400;letter-spacing:0.3em;color:#000000}
 .progress-bar{width:min(320px,80vw);height:2px;background:#e0e0e0}
 .progress-fill{height:100%;background:#000000;width:0%;transition:width 0.3s ease}
 #loader-status{letter-spacing:0.15em;color:#666666}
@@ -18,7 +18,7 @@ body{background:#ffffff;color:#000000;font-family:Arial,Helvetica,sans-serif;fon
 /* ── Startseite mit Raumauswahl ──────────────────────────── */
 #upload-screen{position:fixed;inset:0;background:#ffffff;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:28px;z-index:90;overflow-y:auto;padding:40px 20px;touch-action:pan-y}
 #upload-screen.hidden{display:none}
-#upload-screen h1{font-weight:400;letter-spacing:0.3em;text-transform:uppercase;color:#000000}
+#upload-screen h1{font-weight:400;letter-spacing:0.3em;color:#000000}
 #upload-screen .subtitle{letter-spacing:0.2em;color:#555555;text-transform:uppercase;margin-top:-18px}
 #upload-screen .nav-hint{letter-spacing:0.08em;color:#888888;text-align:center;line-height:1.6;margin-top:-14px}
 
@@ -41,7 +41,7 @@ body{background:#ffffff;color:#000000;font-family:Arial,Helvetica,sans-serif;fon
 /* Overlay */
 #overlay{position:fixed;inset:0;background:rgba(255,255,255,0.94);display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:14px;z-index:50;backdrop-filter:blur(4px);transition:opacity 0.3s ease;overflow-y:auto;padding:40px 0;touch-action:pan-y}
 #overlay.hidden{opacity:0;pointer-events:none}
-#overlay h2{font-weight:400;letter-spacing:0.25em;text-transform:uppercase;color:#000000}
+#overlay h2{font-weight:400;letter-spacing:0.25em;color:#000000}
 .controls-hint{display:grid;grid-template-columns:auto 1fr;gap:5px 14px;letter-spacing:0.08em;color:#888888;line-height:1.7}
 .controls-hint .key{color:#000000;text-align:right}
 .settings-grid{display:grid;grid-template-columns:auto minmax(90px,140px) auto;column-gap:10px;row-gap:10px;align-items:center;width:min(320px,88vw)}
@@ -117,14 +117,14 @@ body{background:#ffffff;color:#000000;font-family:Arial,Helvetica,sans-serif;fon
 <body>
 
 <div id="loader" class="hidden">
-  <h1>GLB Walking</h1>
+  <h1>walk and fly</h1>
   <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
   <span id="loader-status">Loading model ...</span>
 </div>
 
 <!-- ── Startseite mit Raumauswahl ──────────────────────────── -->
 <div id="upload-screen">
-  <h1>GLB Walking</h1>
+  <h1>walk and fly</h1>
   <p class="subtitle">Choose a room or upload your own file, for PC/mobile/VR</p>
   <p class="nav-hint">Navigation PC: Walking WASD, Flying TAB, Space = up, AltGr = down, Q = level horizon, Mouse = look<br>Mobile: Use the Bars, the Walk/Fly Button and the Level Button, touch the screen to look / VR: Teleportation</p>
   
@@ -141,7 +141,7 @@ body{background:#ffffff;color:#000000;font-family:Arial,Helvetica,sans-serif;fon
 </div>
 
 <div id="overlay" class="hidden">
-  <h2 id="overlay-title">GLB Walking</h2>
+  <h2 id="overlay-title">walk and fly</h2>
   <div class="controls-hint" id="desktop-hint">
     <span class="key">W A S D</span><span>Move</span>
     <span class="key">TAB</span><span>Walk / Fly</span>
@@ -333,12 +333,15 @@ const ROOMS = [
   // hinzufügen (Kategorie/Name/Lichtwerte nach Bedarf anpassen) ────
   {
     category: '3D Konstruction',
-    name: 'no data',
+    name: 'old airship hangar',
     file: 'example_10.glb',
     brightness: 3.0,
     ibl: 0.3,
     eyeHeight: 1.20,
-    bgColor: '#fefefe'
+    bgColor: '#fefefe',
+    mode: 'flying',
+    speed: 12.0,   // Maximum des Reglers
+    light: 0.01    // Minimum des Reglers
   }
 ];
 // ═══════════════════════════════════════════════════════════════════
