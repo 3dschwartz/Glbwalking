@@ -19,7 +19,7 @@ body{background:#ffffff;color:#000000;font-family:Arial,Helvetica,sans-serif;fon
 #upload-screen{position:fixed;inset:0;background:#ffffff;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:28px;z-index:90;overflow-y:auto;padding:40px 20px;touch-action:pan-y}
 #upload-screen.hidden{display:none}
 #upload-screen h1{font-weight:400;letter-spacing:0.3em;color:#000000}
-#upload-screen .subtitle{letter-spacing:0.2em;color:#555555;text-transform:uppercase;margin-top:-18px}
+#upload-screen .subtitle{letter-spacing:0.2em;color:#555555;margin-top:-18px}
 #upload-screen .nav-hint{letter-spacing:0.08em;color:#888888;text-align:center;line-height:1.6;margin-top:-14px}
 
 .room-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;width:min(620px,92vw)}
@@ -117,16 +117,16 @@ body{background:#ffffff;color:#000000;font-family:Arial,Helvetica,sans-serif;fon
 <body>
 
 <div id="loader" class="hidden">
-  <h1>walk and fly</h1>
+  <h1>walk and fly through spaces</h1>
   <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
   <span id="loader-status">Loading model ...</span>
 </div>
 
 <!-- ── Startseite mit Raumauswahl ──────────────────────────── -->
 <div id="upload-screen">
-  <h1>walk and fly</h1>
+  <h1>walk and fly through spaces</h1>
   <p class="subtitle">Choose a room or upload your own file, for PC/mobile/VR</p>
-  <p class="nav-hint">Navigation PC: Walking WASD, Flying TAB, Space = up, AltGr = down, Q = level horizon, Mouse = look<br>Mobile: Use the Bars, the Walk/Fly Button and the Level Button, touch the screen to look / VR: Teleportation</p>
+  <p class="nav-hint">Navigation PC: Walking WASD, Flying TAB, Space = up, AltGr = down, Q = level horizon, Mouse = look, double click = go to point<br>Mobile: Use the Bars, the Walk/Fly Button and the Level Button, touch the screen to look, double tap = go to point / VR: Teleportation</p>
   
   <div class="room-grid" id="room-grid">
     <!-- Räume werden dynamisch aus ROOMS generiert -->
@@ -141,13 +141,14 @@ body{background:#ffffff;color:#000000;font-family:Arial,Helvetica,sans-serif;fon
 </div>
 
 <div id="overlay" class="hidden">
-  <h2 id="overlay-title">walk and fly</h2>
+  <h2 id="overlay-title">walk and fly through spaces</h2>
   <div class="controls-hint" id="desktop-hint">
     <span class="key">W A S D</span><span>Move</span>
     <span class="key">TAB</span><span>Walk / Fly</span>
     <span class="key">Space / AltGr</span><span>Up / Down (Fly)</span>
     <span class="key">Q</span><span>Level horizon</span>
     <span class="key">Mouse</span><span>Look around</span>
+    <span class="key">Double click</span><span>Go to point</span>
     <span class="key">ESC</span><span>Pause</span>
   </div>
   <div class="controls-hint" id="touch-hint" style="display:none">
@@ -157,6 +158,7 @@ body{background:#ffffff;color:#000000;font-family:Arial,Helvetica,sans-serif;fon
     <span class="key">Level</span><span>Level horizon</span>
     <span class="key">Top left</span><span>Walk / Fly</span>
     <span class="key">Touch screen</span><span>Look around</span>
+    <span class="key">Double tap</span><span>Go to point</span>
   </div>
   <div class="divider"></div>
   <div class="settings-grid">
@@ -865,6 +867,7 @@ function enterDesktop() {
   controls.lock();
 }
 function showOverlay() {
+  autoTravel = null;
   overlayEl.classList.remove('hidden');
   crosshair.classList.remove('visible');
   escHint.classList.remove('visible');
@@ -958,6 +961,13 @@ document.addEventListener('keyup', e => {
 });
 // Tasten loslassen, wenn das Fenster den Fokus verliert (sonst "hängen" Tasten fest)
 window.addEventListener('blur', () => { for (const k in keys) keys[k]=false; });
+let lastClickTime = 0;
+document.addEventListener('mousedown', e => {
+  if (e.button !== 0 || !controls.isLocked) return;
+  const now = performance.now();
+  if (now - lastClickTime < 350) { lastClickTime = 0; startTravelTo(0, 0); }   // Bildmitte = Fadenkreuz
+  else lastClickTime = now;
+});
 
 // ── Touch-Steuerung ──────────────────────────────────────────────
 // Links: horizontaler Balken (links/rechts), rechts: vertikaler Balken
@@ -1034,6 +1044,30 @@ if (isTouch) {
   const endLook = e => { for (const t of e.changedTouches) if (t.identifier === look.id) look.id = null; };
   document.addEventListener('touchend',    endLook, {passive:true});
   document.addEventListener('touchcancel', endLook, {passive:true});
+
+  // Doppel-Tipp (zwei kurze Tipper dicht beieinander) -> zum Punkt fahren
+  const taps = {};
+  let lastTap = { t: 0, x: 0, y: 0 };
+  document.addEventListener('touchstart', e => {
+    if (!touchActive) return;
+    for (const t of e.changedTouches) {
+      if (isControl(t.target)) continue;
+      taps[t.identifier] = { t: performance.now(), x: t.clientX, y: t.clientY };
+    }
+  }, {passive:true});
+  document.addEventListener('touchend', e => {
+    for (const t of e.changedTouches) {
+      const st = taps[t.identifier]; if (!st) continue;
+      delete taps[t.identifier];
+      const now = performance.now();
+      if (now - st.t > 250 || Math.hypot(t.clientX - st.x, t.clientY - st.y) > 12) continue;   // Wischen/Halten ist kein Tipp
+      if (now - lastTap.t < 350 && Math.hypot(st.x - lastTap.x, st.y - lastTap.y) < 40) {
+        lastTap.t = 0;
+        startTravelTo((t.clientX / window.innerWidth) * 2 - 1, -(t.clientY / window.innerHeight) * 2 + 1);
+      } else lastTap = { t: now, x: st.x, y: st.y };
+    }
+  }, {passive:true});
+  document.addEventListener('touchcancel', e => { for (const t of e.changedTouches) delete taps[t.identifier]; }, {passive:true});
 }
 
 // ── Q / Level-Taste: Kamera horizontal stellen ───────────────────
@@ -1387,6 +1421,69 @@ function moveHorizontal(pos, move) {
   }
 }
 
+// ── Doppelklick / Doppel-Tipp: automatisch zum Punkt fahren ───────
+// Desktop: Ziel ist der Punkt unter dem Fadenkreuz (Bildmitte), da die Maus
+// im Spiel gesperrt ist. Mobile: der doppelt angetippte Bildschirmpunkt.
+// Im Walk-Modus fährt man am Boden hin, im Fly-Modus in 3D. Die Fahrt
+// berücksichtigt die Kollision und bricht bei jeder manuellen Eingabe ab.
+let autoTravel = null;
+const atRay = new THREE.Raycaster();
+atRay.firstHitOnly = true;
+const AT_STOP_WALK = 0.4;   // Abstand vor dem Zielpunkt (Walk, horizontal)
+const AT_STOP_FLY  = 0.8;   // Abstand vor dem Zielpunkt (Fly, 3D)
+function startTravelTo(ndcX, ndcY) {
+  if (collisionMeshes.length === 0) return;
+  atRay.setFromCamera({ x: ndcX, y: ndcY }, camera);
+  atRay.near = 0; atRay.far = 1e5;
+  const hits = atRay.intersectObjects(collisionMeshes, true);
+  if (!hits.length) return;
+  const p = hits[0].point;
+  const o = controls.getObject().position;
+  if (flightMode) {
+    const d = p.clone().sub(o);
+    const len = d.length();
+    if (len < AT_STOP_FLY + 0.3) return;
+    autoTravel = { target: p.clone().addScaledVector(d.divideScalar(len), -AT_STOP_FLY), fly: true, stuck: 0 };
+  } else {
+    const d = new THREE.Vector3(p.x - o.x, 0, p.z - o.z);
+    const len = d.length();
+    if (len < AT_STOP_WALK + 0.3) return;
+    autoTravel = { target: new THREE.Vector3(p.x, 0, p.z).addScaledVector(d.divideScalar(len), -AT_STOP_WALK), fly: false, stuck: 0 };
+  }
+}
+function hasManualInput() {
+  return keys.w || keys.a || keys.s || keys.d || keys.up || keys.down ||
+         Math.abs(fwdBar.v) > 0.1 || Math.abs(strafeBar.v) > 0.1;
+}
+const atBefore = new THREE.Vector3();
+function runAutoTravel(delta, pivot) {
+  const t = autoTravel;
+  const dt = Math.min(delta, 0.1);
+  const dx = t.target.x - pivot.position.x;
+  const dz = t.target.z - pivot.position.z;
+  const dy = t.fly ? t.target.y - pivot.position.y : 0;
+  const dist = Math.hypot(dx, dz, dy);
+  if (dist < 0.15) { autoTravel = null; return; }
+  const speed = Math.min(MOVE_SPEED, Math.max(1.5, dist * 2));   // sanftes Abbremsen am Ziel
+  const step = Math.min(dist, speed * dt);
+  atBefore.copy(pivot.position);
+  const hMove = csMoveTmp.set(dx / dist * step, 0, dz / dist * step);
+  if (hMove.lengthSq() > 1e-12) moveHorizontal(pivot.position, hMove);
+  if (t.fly) {
+    const vy = dy / dist * step;
+    if (Math.abs(vy) > 1e-6) {
+      const vDir = new THREE.Vector3(0, Math.sign(vy), 0);
+      pivot.position.y += vDir.y * sweepAllowed(pivot.position, vDir, Math.abs(vy), VERT_CLEARANCE, true);
+    }
+  } else if (collisionMeshes.length > 0) {
+    pivot.position.y = groundHeight(pivot.position);
+  }
+  const moved = Math.hypot(pivot.position.x - atBefore.x, pivot.position.z - atBefore.z) +
+                (t.fly ? Math.abs(pivot.position.y - atBefore.y) : 0);
+  if (moved < step * 0.25) { t.stuck += dt; if (t.stuck > 0.4) autoTravel = null; }   // steckt fest -> abbrechen
+  else t.stuck = 0;
+}
+
 function updateMovement(delta){
   updateLevel(delta);
   const pivot=controls.getObject();
@@ -1406,6 +1503,10 @@ function updateMovement(delta){
     // Balken sind analog: halber Ausschlag = halbe Geschwindigkeit
     if (Math.abs(fwdBar.v)    > 0.1) moveDir.addScaledVector(tmpVec, -fwdBar.v);
     if (Math.abs(strafeBar.v) > 0.1) moveDir.addScaledVector(right,   strafeBar.v);
+  }
+  if (autoTravel) {
+    if (hasManualInput()) autoTravel = null;           // jede Eingabe übernimmt sofort wieder
+    else { runAutoTravel(delta, pivot); return; }
   }
   const len = moveDir.length();
   if (len > 1) moveDir.divideScalar(len);
