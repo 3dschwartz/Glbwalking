@@ -1018,8 +1018,10 @@ const MAX_PITCH = Math.PI/2 - 0.05;
 const lookEuler = new THREE.Euler(0, 0, 0, 'YXZ');
 function applyLook(dx, dy) {
   lookEuler.setFromQuaternion(camera.quaternion);
-  lookEuler.y -= dx * 0.005;
-  lookEuler.x -= dy * 0.005;
+  // Umgekehrte Wisch-Richtung: nach links wischen = Kamera dreht nach rechts,
+  // nach oben wischen = Kamera blickt nach unten (und umgekehrt).
+  lookEuler.y += dx * 0.005;
+  lookEuler.x += dy * 0.005;
   lookEuler.x = Math.max(-MAX_PITCH, Math.min(MAX_PITCH, lookEuler.x));
   camera.quaternion.setFromEuler(lookEuler);
 }
