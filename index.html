@@ -33,7 +33,7 @@ body{background:#ffffff;color:#000000;font-family:Arial,Helvetica,sans-serif;fon
 
 #drop-zone{width:min(420px,85vw);height:70px;border:1px solid #cccccc;display:flex;flex-direction:row;align-items:center;justify-content:center;gap:12px;cursor:pointer;transition:border-color 0.2s,background 0.2s}
 #drop-zone:hover,#drop-zone.dragover{border-color:#000000;background:rgba(0,0,0,0.04)}
-#drop-zone p{letter-spacing:0.12em;color:#666666;text-transform:uppercase;text-align:left;line-height:1.4}
+#drop-zone p{letter-spacing:0.12em;color:#666666;text-align:left;line-height:1.4}
 #file-input{display:none}
 .upload-btn{width:min(420px,85vw);height:70px;background:transparent;border:1px solid #bbbbbb;color:#888888;letter-spacing:0.2em;text-transform:uppercase;cursor:pointer;transition:border-color 0.2s,color 0.2s;display:flex;align-items:center;justify-content:center}
 .upload-btn:hover,.upload-btn:active{border-color:#000000;color:#000000}
@@ -117,14 +117,14 @@ body{background:#ffffff;color:#000000;font-family:Arial,Helvetica,sans-serif;fon
 <body>
 
 <div id="loader" class="hidden">
-  <h1>walk and fly through spaces</h1>
+  <h1>walk and fly</h1>
   <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
   <span id="loader-status">Loading model ...</span>
 </div>
 
 <!-- ── Startseite mit Raumauswahl ──────────────────────────── -->
 <div id="upload-screen">
-  <h1>walk and fly through spaces</h1>
+  <h1>walk and fly</h1>
   <p class="subtitle">Choose a room or upload your own file, for PC/mobile/VR</p>
   <p class="nav-hint">Navigation PC: Walking WASD, Flying TAB, Space = up, AltGr = down, Q = level horizon, Mouse = look, double click = go to point<br>Mobile: Use the Bars, the Walk/Fly Button and the Level Button, touch the screen to look, double tap = go to point / VR: Teleportation</p>
   
@@ -141,7 +141,7 @@ body{background:#ffffff;color:#000000;font-family:Arial,Helvetica,sans-serif;fon
 </div>
 
 <div id="overlay" class="hidden">
-  <h2 id="overlay-title">walk and fly through spaces</h2>
+  <h2 id="overlay-title">walk and fly</h2>
   <div class="controls-hint" id="desktop-hint">
     <span class="key">W A S D</span><span>Move</span>
     <span class="key">TAB</span><span>Walk / Fly</span>
