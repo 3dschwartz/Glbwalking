@@ -20,6 +20,9 @@ body{background:#ffffff;color:#000000;font-family:Arial,Helvetica,sans-serif;fon
 #upload-screen.hidden{display:none}
 #upload-screen h1{font-weight:400;letter-spacing:0.3em;color:#000000}
 #upload-screen .subtitle{letter-spacing:0.2em;color:#555555;margin-top:-18px}
+#upload-screen .embed{width:min(620px,92vw)}
+#upload-screen .embed iframe{display:block;width:100%;aspect-ratio:16/9;border:0;background:#ffffff}
+#upload-screen .embed-note{letter-spacing:0.05em;color:#888888;text-align:center;line-height:1.6;margin-top:12px}
 #upload-screen .nav-hint{letter-spacing:0.08em;color:#888888;text-align:center;line-height:1.6;margin-top:-14px}
 
 .room-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;width:min(620px,92vw)}
@@ -138,6 +141,13 @@ body{background:#ffffff;color:#000000;font-family:Arial,Helvetica,sans-serif;fon
     <p>drag or upload your own GLB file here</p>
   </div>
   <input type="file" id="file-input" accept=".glb,.GLB,model/gltf-binary,application/octet-stream,*/*" />
+
+  <div class="divider-small"></div>
+
+  <div class="embed">
+    <iframe src="https://view.cas-3d.de/view.php?id=0aced25a5e46347fe1c270263c853281abf39a675aa5c4e2&amp;show_counter=1" title="Old appartement" loading="lazy" allow="fullscreen; xr-spatial-tracking"></iframe>
+    <p class="embed-note">Dieses Beispiel zeigt, wie mithilfe eines iFrames der Player auf einer beliebigen Webseite dargestellt werden kann.</p>
+  </div>
 </div>
 
 <div id="overlay" class="hidden">
