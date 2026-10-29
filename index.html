@@ -26,7 +26,7 @@ body{background:#ffffff;color:#000000;font-family:Arial,Helvetica,sans-serif;fon
 #upload-screen .nav-hint{letter-spacing:0.08em;color:#888888;text-align:center;line-height:1.6;margin-top:-14px}
 
 .room-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;width:min(620px,92vw)}
-.room-card{padding:18px 14px;background:transparent;border:1px solid #cccccc;display:flex;flex-direction:column;align-items:center;gap:8px;cursor:pointer;transition:border-color 0.2s,background 0.2s}
+.room-card{min-height:84px;justify-content:center;padding:18px 14px;background:transparent;border:1px solid #cccccc;display:flex;flex-direction:column;align-items:center;gap:8px;cursor:pointer;transition:border-color 0.2s,background 0.2s}
 .room-card:hover,.room-card:active{border-color:#000000;background:rgba(0,0,0,0.04)}
 .room-card .room-category{letter-spacing:0.15em;color:#888888}
 .room-card .room-name{letter-spacing:0.1em;color:#000000}
@@ -34,9 +34,9 @@ body{background:#ffffff;color:#000000;font-family:Arial,Helvetica,sans-serif;fon
 
 .divider-small{width:min(320px,60vw);height:1px;background:#dddddd}
 
-#drop-zone{width:min(420px,85vw);height:70px;border:1px solid #cccccc;display:flex;flex-direction:row;align-items:center;justify-content:center;gap:12px;cursor:pointer;transition:border-color 0.2s,background 0.2s}
+#drop-zone{width:min(620px,92vw);min-height:84px;padding:10px 16px;border:1px solid #cccccc;display:flex;flex-direction:row;align-items:center;justify-content:center;gap:12px;cursor:pointer;transition:border-color 0.2s,background 0.2s}
 #drop-zone:hover,#drop-zone.dragover{border-color:#000000;background:rgba(0,0,0,0.04)}
-#drop-zone p{letter-spacing:0.12em;color:#666666;text-align:left;line-height:1.4}
+#drop-zone p{letter-spacing:0.05em;color:#666666;text-align:center;line-height:1.4}
 #file-input{display:none}
 .upload-btn{width:min(420px,85vw);height:70px;background:transparent;border:1px solid #bbbbbb;color:#888888;letter-spacing:0.2em;text-transform:uppercase;cursor:pointer;transition:border-color 0.2s,color 0.2s;display:flex;align-items:center;justify-content:center}
 .upload-btn:hover,.upload-btn:active{border-color:#000000;color:#000000}
@@ -138,7 +138,7 @@ body{background:#ffffff;color:#000000;font-family:Arial,Helvetica,sans-serif;fon
   <div class="divider-small"></div>
   
   <div id="drop-zone">
-    <p>drag or upload your own GLB file here</p>
+    <p>Drag or upload your own 3D scan / design here.<br>The 3D file format is GLB (.glb).</p>
   </div>
   <input type="file" id="file-input" accept=".glb,.GLB,model/gltf-binary,application/octet-stream,*/*" />
 
