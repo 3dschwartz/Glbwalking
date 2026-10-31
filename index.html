@@ -129,7 +129,7 @@ body{background:#ffffff;color:#000000;font-family:Arial,Helvetica,sans-serif;fon
 <div id="upload-screen">
   <h1>walk and fly</h1>
   <p class="subtitle">Choose a room or upload your own file, for PC/mobile/VR</p>
-  <p class="nav-hint">Navigation PC: Walking WASD, Flying TAB, Space = up, AltGr = down, Q = level horizon, Mouse = look, double click = go to point<br>Mobile: Use the Bars, the Walk/Fly Button and the Level Button, touch the screen to look, double tap = go to point / VR: Teleportation</p>
+  <p class="nav-hint">Navigation PC: Walking WASD, Flying TAB, Space = up, Alt = down, Q = level horizon, Mouse = look, double click = go to point<br>Mobile: Use the Bars, the Walk/Fly Button and the Level Button, touch the screen to look, double tap = go to point / VR: Teleportation</p>
   
   <div class="room-grid" id="room-grid">
     <!-- Räume werden dynamisch aus ROOMS generiert -->
@@ -155,7 +155,7 @@ body{background:#ffffff;color:#000000;font-family:Arial,Helvetica,sans-serif;fon
   <div class="controls-hint" id="desktop-hint">
     <span class="key">W A S D</span><span>Move</span>
     <span class="key">TAB</span><span>Walk / Fly</span>
-    <span class="key">Space / AltGr</span><span>Up / Down (Fly)</span>
+    <span class="key">Space / Alt</span><span>Up / Down (Fly)</span>
     <span class="key">Q</span><span>Level horizon</span>
     <span class="key">Mouse</span><span>Look around</span>
     <span class="key">Double click</span><span>Go to point</span>
@@ -916,7 +916,7 @@ if (!isTouch) {
   pauseBtn.addEventListener('click',  showOverlay);
 }
 
-// ── Hoch/Runter-Pfeile (Touch): setzen dieselben Flags wie Space/AltGr am Desktop.
+// ── Hoch/Runter-Pfeile (Touch): setzen dieselben Flags wie Space/Alt am Desktop.
 if (isTouch) {
   const setUp   = v => e => { e.preventDefault(); keys.up = v; };
   const setDown = v => e => { e.preventDefault(); keys.down = v; };
@@ -936,10 +936,11 @@ newFileBtn.addEventListener('click', () => {
 });
 
 // ── Tastatur (Desktop) ───────────────────────────────────────────
-// WASD = vor/zurück/seitlich, Space = hoch, AltGr = runter.
-// (AltGr meldet unter Windows zusätzlich ein "ControlLeft" - das wird ignoriert.)
+// WASD = vor/zurück/seitlich, Space = hoch, Alt = runter.
+// (Links und rechts, also auch AltGr; AltGr meldet unter Windows zusätzlich
+// ein "ControlLeft" - das wird ignoriert.)
 const keys = {w:false,a:false,s:false,d:false,up:false,down:false};
-const isAltGr = e => e.code==='AltRight' || e.key==='AltGraph';
+const isAltKey = e => e.code==='AltLeft' || e.code==='AltRight' || e.key==='Alt' || e.key==='AltGraph';
 let flightMode = false;   // Standard: Walking. Umschalten per TAB oder Button
 let groundSettle = 0;     // Frames, in denen die Höhe nach dem Umschalten auf Walking zum Boden nachgeführt wird
 function setFlightMode(on) {
@@ -957,7 +958,9 @@ document.addEventListener('keydown', e => {
   if (e.code==='KeyS'||e.code==='ArrowDown')  keys.s=true;
   if (e.code==='KeyD'||e.code==='ArrowRight') keys.d=true;
   if (e.code==='Space') { keys.up=true;   if (controls.isLocked) e.preventDefault(); }
-  if (isAltGr(e))       { keys.down=true; e.preventDefault(); } // verhindert Menü-Fokus des Browsers
+  if (isAltKey(e))      keys.down=true;
+  // Solange Alt gedrückt ist, Browser-Kürzel verhindern (z.B. Alt+Pfeil links = Zurück, Alt+D = Adressleiste)
+  if (e.altKey && controls.isLocked) e.preventDefault();
   if (e.code==='Tab')   { e.preventDefault(); toggleFlightMode(); }
   if (e.code==='KeyQ' && controls.isLocked) startLevel();
 });
@@ -967,7 +970,7 @@ document.addEventListener('keyup', e => {
   if (e.code==='KeyS'||e.code==='ArrowDown')  keys.s=false;
   if (e.code==='KeyD'||e.code==='ArrowRight') keys.d=false;
   if (e.code==='Space') keys.up=false;
-  if (isAltGr(e))       keys.down=false;
+  if (isAltKey(e)) { keys.down=false; if (controls.isLocked) e.preventDefault(); }   // verhindert Menü-Fokus des Browsers
 });
 // Tasten loslassen, wenn das Fenster den Fokus verliert (sonst "hängen" Tasten fest)
 window.addEventListener('blur', () => { for (const k in keys) keys[k]=false; });
@@ -1530,7 +1533,7 @@ function updateMovement(delta){
   if (moved) moveHorizontal(pivot.position, hMove);
 
   if (flightMode) {
-    // Flying: freie Höhe (Space hoch / AltGr runter bzw. Touch-Pfeile), mit Sweep
+    // Flying: freie Höhe (Space hoch / Alt runter bzw. Touch-Pfeile), mit Sweep
     let vertical = 0;
     if (keys.up)   vertical += 1;
     if (keys.down) vertical -= 1;
